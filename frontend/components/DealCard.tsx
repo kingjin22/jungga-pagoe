@@ -1,12 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { Deal, formatPrice, getSourceLabel, getSourceColor, upvoteDeal } from "@/lib/api";
-import DealModal from "./DealModal";
+import { Deal, formatPrice, getSourceLabel, upvoteDeal } from "@/lib/api";
 
 interface DealCardProps {
   deal: Deal;
+  onClick?: (deal: Deal) => void;
 }
+
+const SOURCE_LABEL: Record<string, string> = {
+  coupang: "쿠팡",
+  naver: "네이버",
+  community: "커뮤니티",
+};
 
 const CATEGORY_EMOJI: Record<string, string> = {
   전자기기: "📱",
@@ -19,11 +25,12 @@ const CATEGORY_EMOJI: Record<string, string> = {
   기타: "📦",
 };
 
-export default function DealCard({ deal }: DealCardProps) {
+export default function DealCard({ deal, onClick }: DealCardProps) {
   const [upvotes, setUpvotes] = useState(deal.upvotes);
-  const [isHot, setIsHot] = useState(deal.is_hot);
   const [voted, setVoted] = useState(false);
-  const [modalOpen, setModalOpen] = useState(false);
+
+  const saved = deal.original_price - deal.sale_price;
+  const targetUrl = deal.affiliate_url || deal.product_url;
 
   const handleUpvote = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -31,146 +38,108 @@ export default function DealCard({ deal }: DealCardProps) {
     try {
       const result = await upvoteDeal(deal.id);
       setUpvotes(result.upvotes);
-      setIsHot(result.is_hot);
       setVoted(true);
-    } catch (e) {
-      console.error(e);
-    }
+    } catch {}
   };
 
-  const discountClass =
-    deal.discount_rate >= 50
-      ? "discount-high"
-      : deal.discount_rate >= 30
-      ? "discount-mid"
-      : "discount-low";
-
-  const targetUrl = deal.affiliate_url || deal.product_url;
-  const savings = deal.original_price - deal.sale_price;
-  const categoryEmoji = CATEGORY_EMOJI[deal.category] || "🛍️";
-
-  // 만료일 계산
-  const daysUntilExpiry = deal.expires_at
-    ? Math.ceil(
-        (new Date(deal.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-      )
-    : null;
-
   return (
-    <>
-      <div
-        className="deal-card bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 cursor-pointer"
-        onClick={() => setModalOpen(true)}
-      >
-        {/* 이미지 */}
-        <div className="relative h-48 bg-gray-100 overflow-hidden">
-          {deal.image_url ? (
-            <img
-              src={deal.image_url}
-              alt={deal.title}
-              className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-5xl bg-gradient-to-br from-gray-100 to-gray-200">
-              {categoryEmoji}
-            </div>
-          )}
-
-          {/* 뱃지들 */}
-          <div className="absolute top-2 left-2 flex flex-col gap-1">
-            {isHot && (
-              <span className="hot-badge bg-[#E31E24] text-white text-xs font-bold px-2 py-0.5 rounded-full">
-                🔥 HOT
-              </span>
-            )}
-            <span
-              className={`${getSourceColor(deal.source)} text-white text-xs font-bold px-2 py-0.5 rounded-full`}
-            >
-              {getSourceLabel(deal.source)}
-            </span>
+    <div
+      className="deal-card group"
+      onClick={() => onClick?.(deal)}
+    >
+      {/* 이미지 영역 */}
+      <div className="relative overflow-hidden bg-gray-100 aspect-square">
+        {deal.image_url ? (
+          <img
+            src={deal.image_url}
+            alt={deal.title}
+            className="deal-card-img w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-4xl bg-gray-100">
+            {CATEGORY_EMOJI[deal.category] || "📦"}
           </div>
+        )}
 
-          {/* 할인율 */}
-          <div className="absolute top-2 right-2 bg-[#E31E24] text-white font-black text-lg px-2 py-1 rounded-xl leading-none">
-            -{Math.round(deal.discount_rate)}%
-          </div>
-
-          {/* 만료일 뱃지 */}
-          {daysUntilExpiry !== null && daysUntilExpiry > 0 && daysUntilExpiry <= 7 && (
-            <div className="absolute bottom-2 right-2 bg-orange-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-              D-{daysUntilExpiry}
-            </div>
-          )}
+        {/* 할인율 뱃지 */}
+        <div className="absolute top-0 left-0 bg-[#E31E24] text-white text-sm font-black px-2 py-1 leading-none">
+          -{Math.round(deal.discount_rate)}%
         </div>
 
-        {/* 내용 */}
-        <div className="p-3">
-          {/* 카테고리 태그 */}
-          <div className="mb-1.5">
-            <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-medium">
-              {categoryEmoji} {deal.category}
-            </span>
+        {/* HOT 뱃지 */}
+        {deal.is_hot && (
+          <div className="absolute top-0 right-0 bg-[#111] text-white text-[10px] font-bold px-1.5 py-1 leading-none">
+            HOT
           </div>
+        )}
 
-          <h3 className="text-sm font-medium text-gray-800 line-clamp-2 hover:text-[#E31E24] transition-colors mb-2 leading-snug">
-            {deal.title}
-          </h3>
-
-          {/* 가격 */}
-          <div className="flex items-end gap-2 mb-1">
-            <span className={`text-xl font-black ${discountClass}`}>
-              {formatPrice(deal.sale_price)}
-            </span>
-            <span className="text-xs text-gray-400 line-through pb-0.5">
-              {formatPrice(deal.original_price)}
-            </span>
-          </div>
-
-          {/* 절약 금액 */}
-          <p className="text-xs text-green-600 font-bold mb-2">
-            💰 {formatPrice(savings)} 절약!
-          </p>
-
-          {/* 하단 */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-xs text-gray-400">
-              <span>👁 {deal.views.toLocaleString()}</span>
-              {deal.submitter_name && (
-                <span className="text-blue-500">by {deal.submitter_name}</span>
-              )}
-            </div>
-
-            <button
-              onClick={handleUpvote}
-              disabled={voted}
-              className={`flex items-center gap-1 text-sm px-3 py-1.5 rounded-full font-bold transition-all ${
-                voted
-                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                  : "bg-red-50 text-[#E31E24] hover:bg-[#E31E24] hover:text-white"
-              }`}
-            >
-              👍 {upvotes}
-            </button>
-          </div>
-
-          {/* 구매 버튼 */}
-          <a
-            href={targetUrl}
-            target="_blank"
-            rel="noopener noreferrer sponsored"
-            onClick={(e) => e.stopPropagation()}
-            className="mt-2 block w-full text-center bg-[#E31E24] text-white font-bold py-2 rounded-xl text-sm hover:bg-[#B71C1C] transition-colors"
-          >
-            지금 구매하기 →
-          </a>
+        {/* 출처 뱃지 */}
+        <div className="absolute bottom-2 left-2">
+          <span className="bg-black/60 text-white text-[10px] font-medium px-1.5 py-0.5">
+            {SOURCE_LABEL[deal.source] || deal.source}
+          </span>
         </div>
       </div>
 
-      {/* 상세 모달 */}
-      <DealModal
-        deal={modalOpen ? deal : null}
-        onClose={() => setModalOpen(false)}
-      />
-    </>
+      {/* 텍스트 영역 */}
+      <div className="pt-2 pb-3">
+        {/* 카테고리 */}
+        <p className="text-[11px] text-gray-400 mb-0.5">{deal.category}</p>
+
+        {/* 제목 */}
+        <p className="text-[13px] text-gray-800 leading-snug line-clamp-2 mb-2 group-hover:text-black transition-colors">
+          {deal.title}
+        </p>
+
+        {/* 가격 */}
+        <div className="flex items-baseline gap-1.5 mb-1">
+          <span className="text-[15px] font-black text-[#E31E24]">
+            -{Math.round(deal.discount_rate)}%
+          </span>
+          <span className="price-sale text-[15px]">
+            {formatPrice(deal.sale_price)}
+          </span>
+        </div>
+        <p className="price-original text-[12px]">
+          {formatPrice(deal.original_price)}
+        </p>
+
+        {/* 절약 금액 */}
+        <p className="text-[11px] text-gray-400 mt-0.5">
+          {formatPrice(saved)} 절약
+        </p>
+
+        {/* 하단: 조회수 + 추천 */}
+        <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
+          <span className="text-[11px] text-gray-400">
+            조회 {deal.views.toLocaleString()}
+          </span>
+          <button
+            onClick={handleUpvote}
+            disabled={voted}
+            className={`flex items-center gap-1 text-[11px] font-medium transition-colors ${
+              voted ? "text-gray-300" : "text-gray-500 hover:text-[#E31E24]"
+            }`}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill={voted ? "#E31E24" : "none"} stroke="currentColor" strokeWidth="2">
+              <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z" />
+              <path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
+            </svg>
+            {upvotes}
+          </button>
+        </div>
+
+        {/* 구매 링크 */}
+        <a
+          href={targetUrl}
+          target="_blank"
+          rel="noopener noreferrer sponsored"
+          onClick={(e) => e.stopPropagation()}
+          className="block mt-2 text-center border border-gray-200 text-[12px] font-semibold py-2 text-gray-700 hover:border-gray-900 hover:text-black transition-colors"
+        >
+          구매하기
+        </a>
+      </div>
+    </div>
   );
 }

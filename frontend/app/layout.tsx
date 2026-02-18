@@ -1,17 +1,6 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/Header";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   title: "정가파괴 - 쿠팡/네이버 핫딜 모음",
@@ -26,21 +15,37 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="ko">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen`}
-      >
+      <body className="min-h-screen bg-white">
         <Header />
-        <main className="max-w-7xl mx-auto px-4 py-6">
-          {children}
-        </main>
-        <footer className="text-center text-xs text-gray-400 py-8 mt-4 border-t">
-          <p>정가파괴 © 2025 · 이 사이트의 일부 링크는 제휴 마케팅 링크입니다</p>
-          <p className="mt-1">쿠팡 파트너스 활동을 통해 일정액의 수수료를 제공받을 수 있습니다</p>
+        <main>{children}</main>
+        <footer className="border-t border-gray-200 mt-16">
+          <div className="max-w-screen-xl mx-auto px-4 py-10">
+            <div className="flex flex-col md:flex-row justify-between gap-6">
+              <div>
+                <p className="font-black text-lg tracking-tight mb-1">정가파괴</p>
+                <p className="text-xs text-gray-400 leading-relaxed">
+                  본 사이트의 일부 링크는 제휴 마케팅 링크입니다.<br />
+                  쿠팡 파트너스 활동을 통해 일정액의 수수료를 제공받을 수 있습니다.
+                </p>
+              </div>
+              <div className="flex gap-8 text-xs text-gray-400">
+                <div>
+                  <p className="font-semibold text-gray-600 mb-2">서비스</p>
+                  <ul className="space-y-1">
+                    <li><a href="/submit" className="hover:text-gray-900">딜 제보</a></li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <div className="mt-8 pt-6 border-t border-gray-100 text-xs text-gray-300">
+              © 2025 정가파괴. All rights reserved.
+            </div>
+          </div>
         </footer>
       </body>
     </html>
