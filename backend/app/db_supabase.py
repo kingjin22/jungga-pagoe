@@ -215,9 +215,10 @@ def get_stats() -> dict:
     rates = [r["discount_rate"] for r in (rates_res.data or []) if r.get("discount_rate")]
     avg_discount = round(sum(rates) / len(rates), 1) if rates else 0.0
 
-    coupang_count = sb.table("deals").select("id", count="exact").eq("source", "coupang").execute().count or 0
-    naver_count = sb.table("deals").select("id", count="exact").eq("source", "naver").execute().count or 0
-    community_count = sb.table("deals").select("id", count="exact").eq("source", "community").execute().count or 0
+    active_statuses = ["active", "price_changed"]
+    coupang_count = sb.table("deals").select("id", count="exact").eq("source", "coupang").in_("status", active_statuses).execute().count or 0
+    naver_count = sb.table("deals").select("id", count="exact").eq("source", "naver").in_("status", active_statuses).execute().count or 0
+    community_count = sb.table("deals").select("id", count="exact").eq("source", "community").in_("status", active_statuses).execute().count or 0
 
     return {
         "total_deals": total,
