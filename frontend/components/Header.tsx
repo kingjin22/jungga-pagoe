@@ -2,32 +2,37 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
-const CATEGORIES = [
+// 소스 필터는 고정 (출처 기반)
+const SOURCE_LINKS = [
   { href: "/", label: "전체" },
   { href: "/?source=coupang", label: "쿠팡" },
   { href: "/?source=naver", label: "네이버" },
   { href: "/?source=community", label: "커뮤니티" },
-  { href: "/?category=전자기기", label: "전자기기" },
-  { href: "/?category=패션", label: "패션" },
-  { href: "/?category=식품", label: "식품" },
-  { href: "/?category=뷰티", label: "뷰티" },
-  { href: "/?category=홈리빙", label: "홈리빙" },
-  { href: "/?category=스포츠", label: "스포츠" },
-  { href: "/?hot_only=true", label: "HOT딜" },
+  { href: "/?hot_only=true", label: "HOT딜", hot: true },
 ];
 
-export default function Header() {
+interface HeaderProps {
+  categories?: string[]; // 서버에서 내려주는 동적 카테고리 목록
+}
+
+export default function Header({ categories = [] }: HeaderProps) {
   const [search, setSearch] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const currentCategory = searchParams.get("category") || "";
+  const currentSource = searchParams.get("source") || "";
+  const isHotOnly = searchParams.get("hot_only") === "true";
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (search.trim()) {
       router.push(`/?search=${encodeURIComponent(search.trim())}`);
       setSearchOpen(false);
+      setSearch("");
     }
   };
 
@@ -36,14 +41,11 @@ export default function Header() {
       {/* 최상단 바 */}
       <div className="bg-[#111] text-white">
         <div className="max-w-screen-xl mx-auto px-4 py-2 flex items-center justify-between">
-          {/* 로고 */}
           <Link href="/" className="font-black text-xl tracking-tight text-white">
             정가파괴
           </Link>
 
-          {/* 우측 액션 */}
           <div className="flex items-center gap-4">
-            {/* 검색 아이콘 */}
             <button
               onClick={() => setSearchOpen(!searchOpen)}
               className="text-gray-400 hover:text-white transition-colors"
@@ -55,7 +57,6 @@ export default function Header() {
               </svg>
             </button>
 
-            {/* 딜 제보 */}
             <Link
               href="/submit"
               className="text-xs font-semibold bg-[#E31E24] text-white px-3 py-1.5 hover:bg-[#c01920] transition-colors"
@@ -65,7 +66,6 @@ export default function Header() {
           </div>
         </div>
 
-        {/* 검색바 (펼침) */}
         {searchOpen && (
           <div className="border-t border-gray-700">
             <form onSubmit={handleSearch} className="max-w-screen-xl mx-auto px-4 py-3 flex gap-2">
@@ -88,23 +88,59 @@ export default function Header() {
         )}
       </div>
 
-      {/* 카테고리 네비 */}
+      {/* 네비 — 소스 + 동적 카테고리 */}
       <div className="bg-white">
         <div className="max-w-screen-xl mx-auto px-4">
           <nav className="flex overflow-x-auto scrollbar-hide">
-            {CATEGORIES.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`shrink-0 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-                  item.label === "HOT딜"
-                    ? "text-[#E31E24] border-transparent hover:border-[#E31E24]"
-                    : "text-gray-600 border-transparent hover:text-gray-900 hover:border-gray-900"
-                }`}
-              >
-                {item.label}
-              </Link>
-            ))}
+            {/* 고정 소스 필터 */}
+            {SOURCE_LINKS.map((item) => {
+              const isActive = item.hot
+                ? isHotOnly
+                : item.href === "/"
+                ? !currentSource && !currentCategory && !isHotOnly
+                : currentSource === item.href.replace("/?source=", "");
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`shrink-0 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                    item.hot
+                      ? isActive
+                        ? "text-[#E31E24] border-[#E31E24]"
+                        : "text-[#E31E24] border-transparent hover:border-[#E31E24]"
+                      : isActive
+                      ? "text-gray-900 border-gray-900 font-bold"
+                      : "text-gray-500 border-transparent hover:text-gray-900 hover:border-gray-300"
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+
+            {/* 구분선 */}
+            {categories.length > 0 && (
+              <span className="self-center mx-1 text-gray-200 text-lg select-none">|</span>
+            )}
+
+            {/* 동적 카테고리 */}
+            {categories.map((cat) => {
+              const isActive = currentCategory === cat;
+              return (
+                <Link
+                  key={cat}
+                  href={isActive ? "/" : `/?category=${encodeURIComponent(cat)}`}
+                  className={`shrink-0 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                    isActive
+                      ? "text-gray-900 border-gray-900 font-bold"
+                      : "text-gray-500 border-transparent hover:text-gray-900 hover:border-gray-300"
+                  }`}
+                >
+                  {cat}
+                </Link>
+              );
+            })}
           </nav>
         </div>
       </div>

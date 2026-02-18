@@ -16,12 +16,12 @@ RSS_URLS = {
 }
 
 # 제목에서 가격 추출 정규식
-PRICE_PATTERNS = [
-    r'[\(（]([0-9,]+)원[\)）]',           # (12,000원)
-    r'[\(（]([0-9,]+)원?\s*/\s*무료[\)）]', # (12,000원/무료)
-    r'([0-9,]+)원',                         # 12,000원
-    r'₩([0-9,]+)',                           # ₩12,000
-    r'\$([0-9.]+)',                           # $12.99
+# 원화 가격만 추출 (달러는 환율 불명확 → 제외)
+KRW_PRICE_PATTERNS = [
+    r'[\(（]([0-9,]+)원[\)）]',            # (12,000원)
+    r'[\(（]([0-9,]+)원?\s*/\s*무료[\)）]',  # (12,000원/무료)
+    r'([0-9,]+)원',                          # 12,000원
+    r'₩([0-9,]+)',                            # ₩12,000
 ]
 
 # 카테고리 추론은 services/categorizer.py 참조
@@ -36,14 +36,14 @@ def _clean_title(title: str) -> str:
 
 
 def _extract_price_from_title(title: str) -> Optional[int]:
-    """제목에서 가격 추출"""
-    for pattern in PRICE_PATTERNS:
+    """제목에서 원화 가격만 추출 (달러 제외)"""
+    for pattern in KRW_PRICE_PATTERNS:
         match = re.search(pattern, title)
         if match:
-            price_str = match.group(1).replace(",", "").replace(".", "")
+            price_str = match.group(1).replace(",", "")
             try:
-                price = int(float(price_str))
-                if 100 <= price <= 100_000_000:  # 100원 ~ 1억 사이
+                price = int(price_str)
+                if 500 <= price <= 50_000_000:  # 500원 ~ 5천만원
                     return price
             except:
                 continue
@@ -109,7 +109,11 @@ def _parse_rss_item(item) -> Optional[dict]:
 
     description = ""
     if desc_tag:
-        desc_text = desc_tag.get_text(strip=True)
+        import html
+        desc_text = desc_tag.get_text(separator=' ', strip=True)
+        # HTML 엔티티 제거 + 연속 공백/개행 정리
+        desc_text = html.unescape(desc_text)
+        desc_text = re.sub(r'[\s\xa0]+', ' ', desc_text).strip()
         description = desc_text[:200] if desc_text else ""
 
     # 가격 추출
@@ -121,13 +125,12 @@ def _parse_rss_item(item) -> Optional[dict]:
     if not sale_price:
         return None
 
-    # 할인율 기반 원가 역산 or 기본값
+    # 할인율 있을 때만 원가 역산, 없으면 원가=판매가 (가짜 데이터 금지)
     if discount_rate and discount_rate > 0:
         original_price = round(sale_price / (1 - discount_rate / 100))
     else:
-        # 할인율 모르면 최소 10% 가정 (보수적)
-        original_price = round(sale_price / 0.85)
-        discount_rate = 15.0
+        original_price = sale_price
+        discount_rate = 0.0
 
     return {
         "title": title,

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Header from "@/components/Header";
+import { getCategories } from "@/lib/api";
 
 export const metadata: Metadata = {
   title: "정가파괴 - 쿠팡/네이버 핫딜 모음",
@@ -13,15 +14,18 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const categories = await getCategories().catch(() => []);
+  const categoryNames = categories.map((c) => c.category);
+
   return (
     <html lang="ko">
       <body className="min-h-screen bg-white">
-        <Header />
+        <Header categories={categoryNames} />
         <main>{children}</main>
         <footer className="border-t border-gray-200 mt-16">
           <div className="max-w-screen-xl mx-auto px-4 py-10">

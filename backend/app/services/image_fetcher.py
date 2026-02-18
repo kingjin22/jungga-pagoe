@@ -18,10 +18,35 @@ HEADERS = {
     "Accept-Language": "ko-KR,ko;q=0.9",
 }
 
+NON_SHOPPING = (
+    # 뽐뿌 자체
+    "ppomppu.co.kr", "cdn2.ppomppu",
+    # 광고/트래킹
+    "doubleclick.net", "googlesyndication", "googletagmanager",
+    "google-analytics", "adservice", "googleadservices",
+    "analytics.", "tracking.", "pixel.",
+    # 표준/메타
+    "w3.org", "schema.org", "xml.org", "xmlns", "apple.com/dtd",
+    # SNS
+    "google.", "facebook.", "twitter.", "instagram.", "youtube.",
+    "kakao.com/link", "kakaocorp.com",
+    # 단축URL (최종 목적지 아님)
+    "t.co/", "bit.ly", "goo.gl", "tinyurl",
+    # JS/CSS
+    ".js", ".css",
+)
+
+
 def _is_shopping_url(url: str) -> bool:
-    """뽐뿌 자체 도메인이 아닌 외부 URL이면 전부 상품 URL로 간주"""
-    excluded = ("ppomppu.co.kr", "cdn2.ppomppu", "google.", "facebook.", "twitter.", "t.co/")
-    return not any(x in url for x in excluded)
+    """실제 쇼핑몰 상품 URL인지 판별 (광고/트래킹/SNS 제외)"""
+    if any(x in url for x in NON_SHOPPING):
+        return False
+    from urllib.parse import urlparse
+    try:
+        p = urlparse(url)
+        return bool(p.netloc and "." in p.netloc and (p.path.strip("/") or p.query))
+    except Exception:
+        return False
 
 
 async def get_og_image(url: str, timeout: float = 6.0) -> Optional[str]:
@@ -73,13 +98,33 @@ async def extract_product_from_ppomppu(ppomppu_url: str) -> dict:
                     img_url = "https:" + img_url
                 result["image_url"] = img_url
 
-            # 2. 쇼핑몰 URL 추출 (HTML 전체에서 정규식)
-            all_urls = re.findall(r'https?://[^\s"\'<>]{15,200}', html)
-            for u in all_urls:
-                u_clean = u.rstrip(".,;)'\"")
-                if _is_shopping_url(u_clean):
-                    result["product_url"] = u_clean
+            # 2. 실제 상품 URL 추출
+            # 방법 A: data-url 속성 (뽐뿌가 광고 트래킹용으로 사용)
+            soup_page = BeautifulSoup(html, "html.parser")
+            for tag in soup_page.find_all(True, attrs={"data-url": True}):
+                du = tag.get("data-url", "")
+                if du.startswith("http") and _is_shopping_url(du):
+                    result["product_url"] = du
                     break
+
+            # 방법 B: s.ppomppu.co.kr?target=base64 디코딩
+            if result["product_url"] == url:
+                import base64
+                from urllib.parse import urlparse, parse_qs
+                for a in soup_page.find_all("a", href=True):
+                    href = a["href"]
+                    if "s.ppomppu.co.kr" in href and "target=" in href:
+                        try:
+                            qs = parse_qs(urlparse(href).query)
+                            encoded = qs.get("target", [""])[0]
+                            # base64 패딩 보정
+                            padding = 4 - len(encoded) % 4
+                            decoded = base64.b64decode(encoded + "=" * padding).decode("utf-8")
+                            if decoded.startswith("http") and _is_shopping_url(decoded):
+                                result["product_url"] = decoded
+                                break
+                        except Exception:
+                            pass
 
     except Exception as e:
         pass

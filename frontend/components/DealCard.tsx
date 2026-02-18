@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { Deal, formatPrice, getSourceLabel, upvoteDeal } from "@/lib/api";
 
 interface DealCardProps {
@@ -15,14 +16,23 @@ const SOURCE_LABEL: Record<string, string> = {
 };
 
 const CATEGORY_EMOJI: Record<string, string> = {
-  전자기기: "📱",
-  패션: "👗",
-  식품: "🍱",
-  뷰티: "💄",
-  홈리빙: "🏠",
-  스포츠: "⚽",
-  유아동: "🧒",
-  기타: "📦",
+  "노트북/PC": "💻",
+  "모니터/TV": "🖥️",
+  "스마트폰": "📱",
+  "태블릿": "📱",
+  "이어폰/헤드폰": "🎧",
+  "카메라": "📷",
+  "가전": "🏠",
+  "게임": "🎮",
+  "네트워크": "📡",
+  "패션/의류": "👗",
+  "식품": "🍱",
+  "뷰티": "💄",
+  "홈리빙": "🏠",
+  "건강": "💊",
+  "도서": "📚",
+  "소프트웨어": "💿",
+  "기타": "📦",
 };
 
 export default function DealCard({ deal, onClick }: DealCardProps) {
@@ -50,10 +60,12 @@ export default function DealCard({ deal, onClick }: DealCardProps) {
       {/* 이미지 영역 */}
       <div className="relative overflow-hidden bg-gray-100 aspect-square">
         {deal.image_url ? (
-          <img
+          <Image
             src={deal.image_url}
             alt={deal.title}
-            className="deal-card-img w-full h-full object-cover"
+            fill
+            className="object-cover"
+            unoptimized
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-4xl bg-gray-100">
@@ -61,10 +73,12 @@ export default function DealCard({ deal, onClick }: DealCardProps) {
           </div>
         )}
 
-        {/* 할인율 뱃지 */}
-        <div className="absolute top-0 left-0 bg-[#E31E24] text-white text-sm font-black px-2 py-1 leading-none">
-          -{Math.round(deal.discount_rate)}%
-        </div>
+        {/* 할인율 뱃지 — 실제 할인율 있을 때만 표시 */}
+        {deal.discount_rate > 0 && (
+          <div className="absolute top-0 left-0 bg-[#E31E24] text-white text-sm font-black px-2 py-1 leading-none">
+            -{Math.round(deal.discount_rate)}%
+          </div>
+        )}
 
         {/* 가격변동 뱃지 */}
         {deal.status === "price_changed" && (
@@ -100,27 +114,31 @@ export default function DealCard({ deal, onClick }: DealCardProps) {
 
         {/* 가격 */}
         <div className="flex items-baseline gap-1.5 mb-1">
-          <span className="text-[15px] font-black text-[#E31E24]">
-            -{Math.round(deal.discount_rate)}%
-          </span>
+          {deal.discount_rate > 0 && (
+            <span className="text-[15px] font-black text-[#E31E24]">
+              -{Math.round(deal.discount_rate)}%
+            </span>
+          )}
           <span className="price-sale text-[15px]">
             {formatPrice(deal.sale_price)}
           </span>
         </div>
-        <p className="price-original text-[12px]">
-          {formatPrice(deal.original_price)}
-        </p>
+        {deal.discount_rate > 0 && (
+          <p className="price-original text-[12px]">
+            {formatPrice(deal.original_price)}
+          </p>
+        )}
 
         {/* 절약 금액 / 가격변동 안내 */}
         {deal.status === "price_changed" && deal.verified_price ? (
           <p className="text-[11px] text-amber-600 mt-0.5 font-medium">
             현재가 {formatPrice(deal.verified_price)} (가격변동)
           </p>
-        ) : (
+        ) : saved > 0 ? (
           <p className="text-[11px] text-gray-400 mt-0.5">
             {formatPrice(saved)} 절약
           </p>
-        )}
+        ) : null}
 
         {/* 하단: 조회수 + 추천 */}
         <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
