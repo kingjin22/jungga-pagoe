@@ -32,8 +32,8 @@ CATEGORY_KEYWORDS = {
     ],
 }
 
-MIN_DISCOUNT_RATE = 15   # 15% 이상만 수집
-MIN_PRICE = 5000         # 5천원 이상 상품만
+MIN_DISCOUNT_RATE = 10   # 10% 이상만 수집
+MIN_PRICE = 3000         # 3천원 이상 상품만
 
 
 def _strip_html(text: str) -> str:
@@ -93,22 +93,20 @@ async def search_with_real_discount(keyword: str, display: int = 20) -> list[dic
         lprice = int(item.get("lprice", 0) or 0)   # 현재 최저가
         hprice = int(item.get("hprice", 0) or 0)   # 최고가/정가
 
-        # 핵심 조건: 네이버 가격 비교 데이터가 있고, 정가 > 최저가
-        if hprice <= 0 or lprice <= 0:
-            continue
-        if hprice <= lprice:
-            continue
-        if lprice < MIN_PRICE:
+        if lprice <= 0 or lprice < MIN_PRICE:
             continue
 
-        discount_rate = round((1 - lprice / hprice) * 100, 1)
-
-        if discount_rate < MIN_DISCOUNT_RATE:
-            continue
+        # hprice(정가)가 있으면 실제 할인율, 없으면 수집은 하되 할인율 0
+        if hprice > 0 and hprice > lprice:
+            discount_rate = round((1 - lprice / hprice) * 100, 1)
+            if discount_rate < MIN_DISCOUNT_RATE:
+                continue
+        else:
+            discount_rate = 0.0  # 할인율 불명 → 수집은 하되 뱃지 미표시
 
         deals.append({
             "title": title,
-            "original_price": float(hprice),
+            "original_price": float(hprice) if hprice > 0 else float(lprice),
             "sale_price": float(lprice),
             "discount_rate": discount_rate,
             "image_url": item.get("image", ""),
