@@ -62,7 +62,7 @@ export async function getDeals(params?: {
   if (params?.hot_only) query.set("hot_only", "true");
 
   const res = await fetch(`${API_BASE}/api/deals?${query}`, {
-    next: { revalidate: 60 },
+    next: { revalidate: 30 },
   });
   if (!res.ok) throw new Error("딜 목록 불러오기 실패");
   return res.json();
@@ -129,7 +129,7 @@ export interface Stats {
 
 export async function getStats(): Promise<Stats> {
   const res = await fetch(`${API_BASE}/api/stats`, {
-    next: { revalidate: 60 },
+    next: { revalidate: 30 },
   });
   if (!res.ok) throw new Error("통계 불러오기 실패");
   return res.json();
@@ -142,7 +142,7 @@ export interface CategoryItem {
 
 export async function getCategories(): Promise<CategoryItem[]> {
   const res = await fetch(`${API_BASE}/api/categories`, {
-    next: { revalidate: 120 },
+    next: { revalidate: 30 },
   });
   if (!res.ok) return [];
   return res.json();
