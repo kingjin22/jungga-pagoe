@@ -1,9 +1,10 @@
 import { Suspense } from "react";
-import { getDeals, getHotDeals } from "@/lib/api";
+import { getDeals, getHotDeals, getCategories } from "@/lib/api";
 import DealGrid from "@/components/DealGrid";
 import HotBanner from "@/components/HotBanner";
 import SortBar from "@/components/SortBar";
 import StatsBar from "@/components/StatsBar";
+import CategoryFilter from "@/components/CategoryFilter";
 import { DealGridSkeleton } from "@/components/DealSkeleton";
 import Link from "next/link";
 
@@ -25,7 +26,7 @@ export default async function HomePage({
   const page = Number(params.page) || 1;
   const isFiltered = !!(params.category || params.source || params.search || params.hot_only);
 
-  const [dealsData, hotDeals] = await Promise.all([
+  const [dealsData, hotDeals, categories] = await Promise.all([
     getDeals({
       page,
       size: 20,
@@ -36,6 +37,7 @@ export default async function HomePage({
       hot_only: params.hot_only === "true",
     }),
     isFiltered ? Promise.resolve([]) : getHotDeals(),
+    getCategories(),
   ]);
 
   return (
@@ -80,6 +82,11 @@ export default async function HomePage({
             {params.hot_only === "true" ? "HOT 딜" : isFiltered ? "검색 결과" : "전체 딜"}
           </h2>
         </div>
+
+        {/* 카테고리 필터 — DB 기반 동적 */}
+        <Suspense fallback={null}>
+          <CategoryFilter categories={categories} />
+        </Suspense>
 
         {/* 정렬 바 */}
         <Suspense fallback={null}>

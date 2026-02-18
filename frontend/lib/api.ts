@@ -134,3 +134,16 @@ export async function getStats(): Promise<Stats> {
   if (!res.ok) throw new Error("통계 불러오기 실패");
   return res.json();
 }
+
+export interface CategoryItem {
+  category: string;
+  count: number;
+}
+
+export async function getCategories(): Promise<CategoryItem[]> {
+  const res = await fetch(`${API_BASE}/api/categories`, {
+    next: { revalidate: 120 },
+  });
+  if (!res.ok) return [];
+  return res.json();
+}
