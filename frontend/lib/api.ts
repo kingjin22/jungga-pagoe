@@ -12,12 +12,14 @@ export interface Deal {
   affiliate_url?: string;
   source: "coupang" | "naver" | "community";
   category: string;
-  status: string;
+  status: "active" | "expired" | "price_changed" | "pending";
   upvotes: number;
   views: number;
   is_hot: boolean;
   submitter_name?: string;
   expires_at?: string;
+  verified_price?: number;      // 마지막 검증된 실제 가격
+  last_verified_at?: string;    // 마지막 검증 시각
   created_at: string;
   updated_at: string;
 }

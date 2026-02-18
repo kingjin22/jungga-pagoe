@@ -29,7 +29,10 @@ async def get_deals(
     hot_only: bool = False,
 ):
     """딜 목록 조회"""
-    query = db.query(Deal).filter(Deal.status == DealStatus.ACTIVE)
+    # ACTIVE + PRICE_CHANGED 둘 다 표시 (EXPIRED만 숨김)
+    query = db.query(Deal).filter(
+        Deal.status.in_([DealStatus.ACTIVE, DealStatus.PRICE_CHANGED])
+    )
 
     # 필터
     if category:

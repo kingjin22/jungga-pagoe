@@ -110,6 +110,17 @@ export default function DealModal({ deal, onClose }: DealModalProps) {
             </p>
           </div>
 
+          {/* 가격변동 경고 */}
+          {deal.status === "price_changed" && (
+            <div className="bg-amber-50 border border-amber-200 px-4 py-3 mb-4">
+              <p className="text-sm font-semibold text-amber-700 mb-0.5">⚠️ 가격이 변동되었습니다</p>
+              <p className="text-xs text-amber-600">
+                등록 당시 가격과 다를 수 있습니다.
+                {deal.verified_price && ` 현재 확인된 가격: ${formatPrice(deal.verified_price)}`}
+              </p>
+            </div>
+          )}
+
           {/* 설명 */}
           {deal.description && (
             <p className="text-sm text-gray-600 leading-relaxed mb-4 border-l-2 border-gray-200 pl-3">

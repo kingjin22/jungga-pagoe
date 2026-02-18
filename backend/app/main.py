@@ -6,6 +6,7 @@ from app.config import settings
 from app.database import Base, engine
 from app.routers import deals
 from app.routers import stats
+from app.routers import verify
 from app.models import deal as deal_model  # noqa: F401 - DB 테이블 생성용
 from app.scheduler import start_scheduler, stop_scheduler
 
@@ -344,6 +345,7 @@ app.add_middleware(
 # 라우터
 app.include_router(deals.router)
 app.include_router(stats.router)
+app.include_router(verify.router)
 
 
 @app.get("/")

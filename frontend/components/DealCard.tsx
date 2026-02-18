@@ -66,8 +66,15 @@ export default function DealCard({ deal, onClick }: DealCardProps) {
           -{Math.round(deal.discount_rate)}%
         </div>
 
+        {/* 가격변동 뱃지 */}
+        {deal.status === "price_changed" && (
+          <div className="absolute top-0 right-0 bg-amber-500 text-white text-[10px] font-bold px-1.5 py-1 leading-none">
+            가격변동
+          </div>
+        )}
+
         {/* HOT 뱃지 */}
-        {deal.is_hot && (
+        {deal.is_hot && deal.status !== "price_changed" && (
           <div className="absolute top-0 right-0 bg-[#111] text-white text-[10px] font-bold px-1.5 py-1 leading-none">
             HOT
           </div>
@@ -104,10 +111,16 @@ export default function DealCard({ deal, onClick }: DealCardProps) {
           {formatPrice(deal.original_price)}
         </p>
 
-        {/* 절약 금액 */}
-        <p className="text-[11px] text-gray-400 mt-0.5">
-          {formatPrice(saved)} 절약
-        </p>
+        {/* 절약 금액 / 가격변동 안내 */}
+        {deal.status === "price_changed" && deal.verified_price ? (
+          <p className="text-[11px] text-amber-600 mt-0.5 font-medium">
+            현재가 {formatPrice(deal.verified_price)} (가격변동)
+          </p>
+        ) : (
+          <p className="text-[11px] text-gray-400 mt-0.5">
+            {formatPrice(saved)} 절약
+          </p>
+        )}
 
         {/* 하단: 조회수 + 추천 */}
         <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
