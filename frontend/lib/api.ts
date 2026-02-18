@@ -147,3 +147,9 @@ export async function getCategories(): Promise<CategoryItem[]> {
   if (!res.ok) return [];
   return res.json();
 }
+
+export async function reportDeal(id: number): Promise<{ reported: boolean; hidden: boolean }> {
+  const res = await fetch(`${API_BASE}/api/deals/${id}/report`, { method: "POST" });
+  if (!res.ok) throw new Error("신고 실패");
+  return res.json();
+}

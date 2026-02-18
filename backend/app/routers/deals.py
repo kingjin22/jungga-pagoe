@@ -192,3 +192,38 @@ async def _convert_to_affiliate_bg(product_url: str, payload: dict):
         # 방금 생성된 딜의 affiliate_url 업데이트
         sb = db.get_supabase()
         sb.table("deals").update({"affiliate_url": affiliate_url}).eq("product_url", product_url).execute()
+
+
+@router.post("/{deal_id}/report")
+async def report_deal(deal_id: int):
+    """가격 오류 신고 — 3회 이상 신고 시 자동 숨김"""
+    from fastapi import HTTPException
+    sb = db.get_supabase()
+    try:
+        deal = sb.table("deals").select("id,report_count,status").eq("id", deal_id).limit(1).execute().data
+    except Exception:
+        deal = sb.table("deals").select("id,status").eq("id", deal_id).limit(1).execute().data
+
+    if not deal:
+        raise HTTPException(status_code=404, detail="딜을 찾을 수 없습니다")
+
+    current = deal[0]
+    new_count = (current.get("report_count") or 0) + 1
+    patch = {}
+    try:
+        patch["report_count"] = new_count
+    except Exception:
+        pass
+
+    if new_count >= 3:
+        patch["status"] = "expired"
+
+    if patch:
+        try:
+            sb.table("deals").update(patch).eq("id", deal_id).execute()
+        except Exception:
+            # report_count 컬럼 없을 경우 status만 업데이트
+            if "status" in patch:
+                sb.table("deals").update({"status": patch["status"]}).eq("id", deal_id).execute()
+
+    return {"reported": True, "report_count": new_count, "hidden": new_count >= 3}

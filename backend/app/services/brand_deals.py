@@ -129,8 +129,21 @@ def _brand_in_title(brand: str, title: str) -> bool:
     return any(alias.lower() in title_lower for alias in checks)
 
 
+def _title_match_score(query: str, title: str) -> float:
+    """쿼리 키워드가 결과 제목에 얼마나 포함됐는지 (0~1)"""
+    q_words = set(re.findall(r'[가-힣a-zA-Z0-9]+', query.lower()))
+    t_words = set(re.findall(r'[가-힣a-zA-Z0-9]+', title.lower()))
+    if not q_words:
+        return 0.0
+    matched = q_words & t_words
+    return len(matched) / len(q_words)
+
+
 async def _get_naver_lprice(query: str, headers: dict, client: httpx.AsyncClient) -> Optional[tuple]:
-    """네이버 쇼핑 현재 최저가 + 이미지 + 링크 반환"""
+    """
+    네이버 쇼핑 현재 최저가 + 이미지 + 링크 반환
+    검증: 제목 매칭 + 가격 분산 체크
+    """
     try:
         resp = await client.get(
             f"{NAVER_API_BASE}/search/shop.json",
@@ -146,8 +159,41 @@ async def _get_naver_lprice(query: str, headers: dict, client: httpx.AsyncClient
     if not items:
         return None
 
-    # 최저가 상품 선택
-    best = min(items, key=lambda x: int(x.get("lprice", 999_999_999) or 999_999_999))
+    # 유효한 가격 항목만 필터
+    priced = [i for i in items if int(i.get("lprice", 0) or 0) >= MIN_PRICE_KRW]
+    if not priced:
+        return None
+
+    # ── 검증 1: 제목 키워드 매칭 ──────────────────────────────────
+    # 각 결과의 제목이 쿼리 키워드와 얼마나 일치하는지
+    scored = []
+    for item in priced:
+        t = _clean_html(item.get("title", ""))
+        score = _title_match_score(query, t)
+        scored.append((score, item))
+    # 매칭률 50% 미만 → 신뢰 불가
+    scored = [(s, i) for s, i in scored if s >= 0.50]
+    if not scored:
+        logger.debug(f"  ✗ '{query}' — 제목 키워드 매칭 실패")
+        return None
+
+    # ── 검증 2: 가격 분산 체크 ────────────────────────────────────
+    prices = sorted(int(i.get("lprice", 0) or 0) for _, i in scored)
+    if len(prices) >= 2:
+        p_min, p_max = prices[0], prices[-1]
+        # 최저가가 2위 대비 40% 이상 싸면 이상치 → 제외
+        p_second = prices[1]
+        if p_min < p_second * 0.60:
+            logger.debug(f"  ✗ '{query}' — 이상 최저가 ({p_min:,} vs 2위 {p_second:,}) → 2위 사용")
+            # 이상치 제거 후 2위 기준으로
+            scored = [(s, i) for s, i in scored if int(i.get("lprice", 0) or 0) >= p_second]
+            if not scored:
+                return None
+
+    # 최고 매칭률 상품 선택 (동점이면 최저가)
+    scored.sort(key=lambda x: (-x[0], int(x[1].get("lprice", 999_999) or 999_999)))
+    best_score, best = scored[0]
+
     lp = int(best.get("lprice", 0) or 0)
     if lp < MIN_PRICE_KRW:
         return None

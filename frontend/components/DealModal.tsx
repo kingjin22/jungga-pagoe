@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
-import { Deal, formatPrice } from "@/lib/api";
+import { useEffect, useState } from "react";
+import { Deal, formatPrice, reportDeal } from "@/lib/api";
 
 const SOURCE_LABEL: Record<string, string> = {
   coupang: "쿠팡",
@@ -15,6 +15,24 @@ interface DealModalProps {
 }
 
 export default function DealModal({ deal, onClose }: DealModalProps) {
+  const [reported, setReported] = useState(false);
+  const [reporting, setReporting] = useState(false);
+
+  const handleReport = async () => {
+    if (!deal || reported || reporting) return;
+    setReporting(true);
+    try {
+      const res = await reportDeal(deal.id);
+      setReported(true);
+      if (res.hidden) onClose();
+    } catch {}
+    finally { setReporting(false); }
+  };
+
+  useEffect(() => {
+    setReported(false); // 딜 바뀌면 신고 상태 초기화
+  }, [deal?.id]);
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -155,6 +173,21 @@ export default function DealModal({ deal, onClose }: DealModalProps) {
               이 링크는 제휴 마케팅 링크입니다
             </p>
           )}
+
+          {/* 가격 오류 신고 */}
+          <div className="mt-4 pt-3 border-t border-gray-100 text-center">
+            {reported ? (
+              <p className="text-[11px] text-gray-400">신고가 접수되었습니다. 검토 후 처리됩니다.</p>
+            ) : (
+              <button
+                onClick={handleReport}
+                disabled={reporting}
+                className="text-[11px] text-gray-300 hover:text-red-400 transition-colors underline-offset-2 hover:underline"
+              >
+                {reporting ? "신고 중..." : "가격 정보 오류 신고"}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>
