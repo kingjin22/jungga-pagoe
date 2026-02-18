@@ -14,11 +14,14 @@ export default async function StatsBar() {
   const stats = await fetchStats();
   if (!stats) return null;
 
+  const avgDiscount = stats.avg_discount > 0 ? `${stats.avg_discount}%` : "-";
   const items = [
     { label: "전체 딜", value: `${stats.total_deals.toLocaleString()}개` },
     { label: "HOT 딜", value: `${stats.hot_deals.toLocaleString()}개` },
-    { label: "평균 할인율", value: `${stats.avg_discount}%` },
-    { label: "오늘 등록", value: `${stats.today_added}개` },
+    { label: "평균 할인율", value: avgDiscount },
+    { label: "오늘 등록", value: `${stats.today_added.toLocaleString()}개` },
+    { label: "커뮤니티", value: `${(stats.by_source?.community || 0).toLocaleString()}개` },
+    { label: "네이버", value: `${(stats.by_source?.naver || 0).toLocaleString()}개` },
   ];
 
   return (
