@@ -121,11 +121,18 @@ async def verify_deal(deal) -> dict:
     단일 딜 가격 검증
     Returns: {verified_price, action, change_pct, url_alive}
     """
-    print(f"  [검증] #{deal.id} {deal.title[:40]}")
+    deal_id = deal.get("id") if isinstance(deal, dict) else deal.id
+    deal_title = deal.get("title") if isinstance(deal, dict) else deal.title
+    deal_source = deal.get("source") if isinstance(deal, dict) else deal.source
+    deal_url = deal.get("product_url") if isinstance(deal, dict) else deal.product_url
+    deal_sale_price = deal.get("sale_price") if isinstance(deal, dict) else deal.sale_price
+    deal_verified_price = deal.get("verified_price") if isinstance(deal, dict) else deal.verified_price
+
+    print(f"  [검증] #{deal_id} {str(deal_title)[:40]}")
 
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     result = {
-        "verified_price": deal.verified_price,
+        "verified_price": deal_verified_price,
         "last_verified_at": now,
         "action": "ok",
         "change_pct": 0.0,
@@ -133,29 +140,25 @@ async def verify_deal(deal) -> dict:
     }
 
     # 1. URL 생존 확인
-    url_alive = await check_url_alive(deal.product_url)
+    url_alive = await check_url_alive(deal_url)
     result["url_alive"] = url_alive
 
     if not url_alive:
-        print(f"    → URL 죽음 (fail_count: {deal.verify_fail_count + 1})")
         result["action"] = "url_dead"
         return result
 
-    # 2. 가격 확인 (네이버 소스이거나 제목으로 검색 가능한 경우)
+    # 2. 가격 확인
     current_price = None
-
-    if deal.source in ("naver", "community"):
-        current_price = await check_naver_price(deal.title, deal.sale_price)
-    # 쿠팡은 API 키 필요 → 현재는 URL 생존 여부만 체크
+    if deal_source in ("naver", "community"):
+        current_price = await check_naver_price(str(deal_title), float(deal_sale_price or 0))
 
     if current_price is not None:
         result["verified_price"] = current_price
-        evaluation = evaluate_price_change(deal.sale_price, current_price)
+        evaluation = evaluate_price_change(float(deal_sale_price or 0), current_price)
         result["action"] = evaluation["action"]
         result["change_pct"] = evaluation["change_pct"]
-        print(f"    → 현재가: {int(current_price):,}원 (등록가 {int(deal.sale_price):,}원, {evaluation['change_pct']:+.1f}%) → {evaluation['action']}")
+        print(f"    → 현재가: {int(current_price):,}원 ({evaluation['change_pct']:+.1f}%) → {evaluation['action']}")
     else:
-        # 가격 확인 불가 → URL만 살아있으면 OK
-        print(f"    → 가격 확인 불가, URL은 정상")
+        print(f"    → 가격 확인 불가, URL 정상")
 
     return result

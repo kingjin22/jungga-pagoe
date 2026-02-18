@@ -159,9 +159,14 @@ def _parse_rss_item(item) -> Optional[dict]:
 
 
 async def fetch_ppomppu_deals() -> list[dict]:
-    """뽐뿌 RSS에서 핫딜 수집"""
-    all_deals = []
-    seen_urls = set()
+    """
+    뽐뿌 RSS 수집 → 각 포스트에서 실제 상품 URL + 이미지 추출
+    """
+    from app.services.image_fetcher import enrich_deal_with_image
+    import asyncio
+
+    raw_deals = []
+    seen_ppomppu_urls = set()
 
     async with httpx.AsyncClient() as client:
         for name, url in RSS_URLS.items():
@@ -176,16 +181,38 @@ async def fetch_ppomppu_deals() -> list[dict]:
 
                 soup = BeautifulSoup(resp.text, "xml")
                 items = soup.find_all("item")
-                print(f"  [뽐뿌/{name}] {len(items)}개 아이템 파싱 중...")
+                print(f"  [뽐뿌/{name}] {len(items)}개 RSS 파싱 중...")
 
                 for item in items:
                     deal = _parse_rss_item(item)
-                    if deal and deal["product_url"] not in seen_urls:
-                        seen_urls.add(deal["product_url"])
-                        all_deals.append(deal)
+                    if deal and deal["product_url"] not in seen_ppomppu_urls:
+                        seen_ppomppu_urls.add(deal["product_url"])
+                        raw_deals.append(deal)
 
             except Exception as e:
-                print(f"  [뽐뿌/{name}] 오류: {e}")
+                print(f"  [뽐뿌/{name}] RSS 오류: {e}")
 
-    print(f"[뽐뿌] 수집 완료: {len(all_deals)}개 (가격 정보 있는 딜)")
-    return all_deals
+    print(f"  [뽐뿌] RSS 파싱: {len(raw_deals)}개 → 이미지/상품URL 추출 시작...")
+
+    # 각 포스트에서 실제 상품 URL + 이미지 병렬 추출 (최대 5개씩 배치)
+    enriched = []
+    seen_product_urls = set()
+
+    for i in range(0, len(raw_deals), 5):
+        batch = raw_deals[i:i+5]
+        tasks = [enrich_deal_with_image(deal) for deal in batch]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        for deal in results:
+            if isinstance(deal, Exception):
+                continue
+            url = deal.get("product_url", "")
+            if url and url not in seen_product_urls:
+                seen_product_urls.add(url)
+                enriched.append(deal)
+
+        # 서버 부하 방지
+        await asyncio.sleep(0.5)
+
+    print(f"[뽐뿌] 완료: {len(enriched)}개 (이미지 포함)")
+    return enriched

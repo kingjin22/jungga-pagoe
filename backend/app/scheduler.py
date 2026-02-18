@@ -15,196 +15,104 @@ scheduler = AsyncIOScheduler()
 
 
 async def _sync_coupang():
-    """쿠팡 딜 자동 동기화"""
     try:
-        from app.database import SessionLocal
-        from app.models.deal import Deal, DealSource, DealStatus
+        import app.db_supabase as db
         from app.services.coupang import get_best_deals
-
-        db = SessionLocal()
-        try:
-            deals_data = await get_best_deals(limit=30)
-            created = 0
-            for item in deals_data:
-                existing = db.query(Deal).filter(Deal.product_url == item["product_url"]).first()
-                if existing:
-                    continue
-                original = item.get("original_price", 0)
-                sale = item.get("sale_price", 0)
-                if original <= 0 or sale <= 0:
-                    continue
-                discount_rate = round((1 - sale / original) * 100, 1)
-                if discount_rate < 5:
-                    continue
-                deal = Deal(
-                    title=item["title"],
-                    original_price=original,
-                    sale_price=sale,
-                    discount_rate=discount_rate,
-                    image_url=item.get("image_url"),
-                    product_url=item["product_url"],
-                    affiliate_url=item.get("affiliate_url"),
-                    source=DealSource.COUPANG,
-                    status=DealStatus.ACTIVE,
-                    is_hot=discount_rate >= 40,
-                )
-                db.add(deal)
-                created += 1
-            db.commit()
-            logger.info(f"✅ 쿠팡 자동 sync: {created}개 신규 딜")
-        finally:
-            db.close()
+        deals_data = await get_best_deals(limit=30)
+        created = 0
+        for item in deals_data:
+            if db.deal_url_exists(item["product_url"]):
+                continue
+            orig, sale = item.get("original_price", 0), item.get("sale_price", 0)
+            if orig <= 0 or sale <= 0: continue
+            dr = round((1 - sale / orig) * 100, 1)
+            if dr < 5: continue
+            db.create_deal({"title": item["title"], "original_price": orig, "sale_price": sale,
+                "discount_rate": dr, "image_url": item.get("image_url"),
+                "product_url": item["product_url"], "affiliate_url": item.get("affiliate_url"),
+                "source": "coupang", "status": "active", "is_hot": dr >= 40})
+            created += 1
+        logger.info(f"✅ 쿠팡 sync: {created}개")
     except Exception as e:
-        logger.error(f"❌ 쿠팡 sync 오류: {e}")
+        logger.error(f"❌ 쿠팡 sync: {e}")
 
 
 async def _sync_naver():
-    """네이버 딜 자동 동기화"""
     try:
-        from app.database import SessionLocal
-        from app.models.deal import Deal, DealSource, DealStatus
-        from app.services.naver import get_hot_deals
-
-        db = SessionLocal()
-        try:
-            deals_data = await get_hot_deals()
-            created = 0
-            for item in deals_data:
-                existing = db.query(Deal).filter(Deal.product_url == item["product_url"]).first()
-                if existing:
-                    continue
-                original = item.get("original_price", 0)
-                sale = item.get("sale_price", 0)
-                if original <= 0 or sale <= 0:
-                    continue
-                discount_rate = round((1 - sale / original) * 100, 1)
-                if discount_rate < 5:
-                    continue
-                deal = Deal(
-                    title=item["title"],
-                    original_price=original,
-                    sale_price=sale,
-                    discount_rate=discount_rate,
-                    image_url=item.get("image_url"),
-                    product_url=item["product_url"],
-                    source=DealSource.NAVER,
-                    status=DealStatus.ACTIVE,
-                    is_hot=discount_rate >= 40,
-                )
-                db.add(deal)
-                created += 1
-            db.commit()
-            logger.info(f"✅ 네이버 자동 sync: {created}개 신규 딜")
-        finally:
-            db.close()
+        import app.db_supabase as db
+        from app.services.naver import collect_real_deals
+        deals_data = await collect_real_deals(limit_per_keyword=5)
+        created = 0
+        for item in deals_data:
+            if db.deal_url_exists(item["product_url"]):
+                continue
+            orig, sale = item.get("original_price", 0), item.get("sale_price", 0)
+            if orig <= 0 or sale <= 0: continue
+            dr = round((1 - sale / orig) * 100, 1)
+            if dr < 10: continue
+            db.create_deal({"title": item["title"], "original_price": orig, "sale_price": sale,
+                "discount_rate": dr, "image_url": item.get("image_url"),
+                "product_url": item["product_url"], "source": "naver",
+                "category": item.get("category", "기타"), "status": "active", "is_hot": dr >= 40})
+            created += 1
+        logger.info(f"✅ 네이버 sync: {created}개")
     except Exception as e:
-        logger.error(f"❌ 네이버 sync 오류: {e}")
+        logger.error(f"❌ 네이버 sync: {e}")
 
 
 async def _sync_ppomppu():
-    """뽐뿌 핫딜 자동 동기화 (30분마다)"""
     try:
-        from app.database import SessionLocal
-        from app.models.deal import Deal, DealSource, DealCategory, DealStatus
+        import app.db_supabase as db
         from app.services.ppomppu import fetch_ppomppu_deals
-
-        db = SessionLocal()
-        category_map = {
-            "전자기기": DealCategory.ELECTRONICS,
-            "패션": DealCategory.FASHION,
-            "식품": DealCategory.FOOD,
-            "뷰티": DealCategory.BEAUTY,
-            "홈리빙": DealCategory.HOME,
-            "스포츠": DealCategory.SPORTS,
-        }
-        try:
-            deals_data = await fetch_ppomppu_deals()
-            created = 0
-            for item in deals_data:
-                existing = db.query(Deal).filter(Deal.product_url == item["product_url"]).first()
-                if existing:
-                    continue
-                discount_rate = item.get("discount_rate", 15.0)
-                deal = Deal(
-                    title=item["title"],
-                    description=item.get("description"),
-                    original_price=item["original_price"],
-                    sale_price=item["sale_price"],
-                    discount_rate=discount_rate,
-                    image_url=item.get("image_url"),
-                    product_url=item["product_url"],
-                    source=DealSource.COMMUNITY,
-                    category=category_map.get(item.get("category", "기타"), DealCategory.OTHER),
-                    status=DealStatus.ACTIVE,
-                    is_hot=discount_rate >= 40,
-                    submitter_name="뽐뿌",
-                )
-                db.add(deal)
-                created += 1
-            db.commit()
-            logger.info(f"✅ 뽐뿌 자동 sync: {created}개 신규 딜")
-        finally:
-            db.close()
+        deals_data = await fetch_ppomppu_deals()
+        created = 0
+        for item in deals_data:
+            if db.deal_url_exists(item["product_url"]):
+                continue
+            dr = item.get("discount_rate", 15.0)
+            db.create_deal({"title": item["title"], "description": item.get("description"),
+                "original_price": item["original_price"], "sale_price": item["sale_price"],
+                "discount_rate": dr, "image_url": item.get("image_url"),
+                "product_url": item["product_url"], "source": "community",
+                "category": item.get("category", "기타"), "status": "active",
+                "is_hot": dr >= 40, "submitter_name": "뽐뿌"})
+            created += 1
+        logger.info(f"✅ 뽐뿌 sync: {created}개")
     except Exception as e:
-        logger.error(f"❌ 뽐뿌 sync 오류: {e}")
+        logger.error(f"❌ 뽐뿌 sync: {e}")
 
 
 async def _verify_prices():
-    """
-    가격 검증 스케줄 작업
-    활성 딜 전체의 현재 가격을 확인하고, 가격이 올랐으면 비활성 처리
-    """
     logger.info("🔍 가격 검증 시작...")
     try:
-        from app.database import SessionLocal
-        from app.models.deal import Deal, DealStatus
+        import app.db_supabase as db
         from app.services.price_checker import verify_deal, MAX_FAIL_COUNT
         from datetime import datetime, timedelta
-
-        db = SessionLocal()
-        try:
-            cutoff = datetime.utcnow() - timedelta(minutes=55)  # 55분 이상 지난 딜만
-            deals = db.query(Deal).filter(
-                Deal.status.in_([DealStatus.ACTIVE, DealStatus.PRICE_CHANGED]),
-                (Deal.last_verified_at == None) | (Deal.last_verified_at < cutoff),
-            ).all()
-
-            logger.info(f"  검증 대상: {len(deals)}개")
-            ok, changed, expired_count = 0, 0, 0
-
-            for deal in deals:
-                try:
-                    check = await verify_deal(deal)
-                    deal.last_verified_at = check["last_verified_at"]
-                    if check["verified_price"] is not None:
-                        deal.verified_price = check["verified_price"]
-
-                    action = check["action"]
-                    if action == "url_dead":
-                        deal.verify_fail_count = (deal.verify_fail_count or 0) + 1
-                        if deal.verify_fail_count >= MAX_FAIL_COUNT:
-                            deal.status = DealStatus.EXPIRED
-                            expired_count += 1
-                    elif action == "expired":
-                        deal.status = DealStatus.EXPIRED
-                        deal.verify_fail_count = 0
-                        expired_count += 1
-                    elif action == "price_changed":
-                        deal.status = DealStatus.PRICE_CHANGED
-                        deal.verify_fail_count = 0
-                        changed += 1
-                    else:
-                        deal.status = DealStatus.ACTIVE
-                        deal.verify_fail_count = 0
-                        ok += 1
-
-                    db.commit()
-                except Exception as e:
-                    logger.error(f"  딜 #{deal.id} 검증 오류: {e}")
-
-            logger.info(f"✅ 가격 검증 완료 — 정상:{ok} 변동:{changed} 만료:{expired_count}")
-        finally:
-            db.close()
+        cutoff = (datetime.utcnow() - timedelta(minutes=55)).isoformat()
+        deals = db.get_deals_for_verify(cutoff)
+        logger.info(f"  검증 대상: {len(deals)}개")
+        ok = changed = expired_count = 0
+        for deal in deals:
+            try:
+                check = await verify_deal(deal)
+                patch = {"last_verified_at": check["last_verified_at"].isoformat()}
+                if check["verified_price"] is not None:
+                    patch["verified_price"] = check["verified_price"]
+                action = check["action"]
+                fail = int(deal.get("verify_fail_count") or 0)
+                if action == "url_dead":
+                    fail += 1; patch["verify_fail_count"] = fail
+                    if fail >= MAX_FAIL_COUNT: patch["status"] = "expired"; expired_count += 1
+                elif action == "expired":
+                    patch["status"] = "expired"; patch["verify_fail_count"] = 0; expired_count += 1
+                elif action == "price_changed":
+                    patch["status"] = "price_changed"; patch["verify_fail_count"] = 0; changed += 1
+                else:
+                    patch["status"] = "active"; patch["verify_fail_count"] = 0; ok += 1
+                db.update_deal_verify(deal["id"], patch)
+            except Exception as e:
+                logger.error(f"  딜 #{deal.get('id')} 검증 오류: {e}")
+        logger.info(f"✅ 가격 검증 완료 — 정상:{ok} 변동:{changed} 만료:{expired_count}")
     except Exception as e:
         logger.error(f"❌ 가격 검증 오류: {e}")
 
