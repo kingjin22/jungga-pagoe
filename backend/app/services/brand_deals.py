@@ -16,9 +16,16 @@ logger = logging.getLogger(__name__)
 NAVER_API_BASE = "https://openapi.naver.com/v1"
 
 MIN_DISCOUNT_PCT = 10  # 10% 이상 할인만
-MAX_DISCOUNT_PCT = 65  # 65% 초과 = 다른 제품 매칭 의심 → 제외
+MAX_DISCOUNT_PCT = 55  # 55% 초과 = 가품/잘못된 매칭 의심 → 제외 (강화)
 MIN_PRICE_KRW   = 10_000
-MIN_PRICE_RATIO  = 0.30  # MSRP의 30% 미만 = 다른 제품으로 간주 → 제외
+MIN_PRICE_RATIO  = 0.30  # 기본: MSRP 30% 미만 제외
+
+# 카테고리별 강화 기준 (가품 위험 높은 카테고리)
+CATEGORY_MIN_RATIO = {
+    "신발": 0.50,   # 신발 정가 50% 미만 = 가품 의심 (나이키 36%는 제외)
+    "패션": 0.45,   # 패션도 45% 이상만
+    "뷰티": 0.40,   # 뷰티 40%
+}
 
 # ────────────────────────────────────────────────────────────────────────
 # 공식 정가(MSRP) 테이블 — 한국 공식 정가 기준
@@ -88,6 +95,40 @@ def _clean_html(text: str) -> str:
     return re.sub(r"<[^>]+>", "", text).strip()
 
 
+def _brand_in_title(brand: str, title: str) -> bool:
+    """결과 제목에 브랜드명이 실제로 포함되어 있는지 확인 (가품 필터)"""
+    title_lower = title.lower()
+    brand_lower = brand.lower()
+    # 브랜드명 별칭 매핑
+    aliases = {
+        "nike": ["나이키", "nike"],
+        "adidas": ["아디다스", "adidas"],
+        "new balance": ["뉴발란스", "new balance", "newbalance", "NB"],
+        "hoka": ["호카", "hoka"],
+        "asics": ["아식스", "asics"],
+        "salomon": ["살로몬", "salomon"],
+        "apple": ["애플", "apple", "에어팟", "아이패드", "airpods", "ipad", "applewatch"],
+        "samsung": ["삼성", "samsung", "갤럭시", "galaxy"],
+        "sony": ["소니", "sony"],
+        "bose": ["보스", "bose"],
+        "dyson": ["다이슨", "dyson"],
+        "lg": ["lg", "엘지"],
+        "the north face": ["노스페이스", "north face", "northface"],
+        "patagonia": ["파타고니아", "patagonia"],
+        "uniqlo": ["유니클로", "uniqlo"],
+        "estee lauder": ["에스티로더", "estee lauder"],
+        "sk-ii": ["sk-ii", "sk ii", "skii"],
+        "sulwhasoo": ["설화수", "sulwhasoo"],
+        "innisfree": ["이니스프리", "innisfree"],
+        "nespresso": ["네스프레소", "nespresso"],
+        "de'longhi": ["드롱기", "delonghi", "de'longhi"],
+        "cuckoo": ["쿠쿠", "cuckoo"],
+        "philips": ["필립스", "philips"],
+    }
+    checks = aliases.get(brand_lower, [brand_lower])
+    return any(alias.lower() in title_lower for alias in checks)
+
+
 async def _get_naver_lprice(query: str, headers: dict, client: httpx.AsyncClient) -> Optional[tuple]:
     """네이버 쇼핑 현재 최저가 + 이미지 + 링크 반환"""
     try:
@@ -111,7 +152,7 @@ async def _get_naver_lprice(query: str, headers: dict, client: httpx.AsyncClient
     if lp < MIN_PRICE_KRW:
         return None
 
-    return lp, best.get("image", ""), best.get("link", "")
+    return lp, best.get("image", ""), best.get("link", ""), _clean_html(best.get("title", ""))
 
 
 async def collect_brand_deals(min_discount: float = MIN_DISCOUNT_PCT) -> list[dict]:
@@ -135,15 +176,22 @@ async def collect_brand_deals(min_discount: float = MIN_DISCOUNT_PCT) -> list[di
             if not naver:
                 continue
 
-            lprice, image, link = naver
+            lprice, image, link, found_title = naver
             msrp = product["msrp"]
 
             if lprice >= msrp:
                 continue  # 정가 이상이면 딜 아님
 
-            # 가격 합리성 검증: 너무 싸면 잘못된 제품 매칭
-            if lprice < msrp * MIN_PRICE_RATIO:
-                logger.debug(f"  ✗ {product['brand']} {product['query'][:20]} — 가격 비합리 ({lprice:,}원, MSRP {msrp:,}원)")
+            # 1. 카테고리별 최소 가격 비율 (가품 필터)
+            cat = product["category"]
+            min_ratio = CATEGORY_MIN_RATIO.get(cat, MIN_PRICE_RATIO)
+            if lprice < msrp * min_ratio:
+                logger.debug(f"  ✗ {product['brand']} — 가격 비합리 ({lprice:,}원 < MSRP×{min_ratio:.0%})")
+                continue
+
+            # 2. 결과 제목에 브랜드명 포함 여부 (가품/잘못된 매칭 필터)
+            if not _brand_in_title(product["brand"], found_title):
+                logger.debug(f"  ✗ {product['brand']} — 브랜드명 미포함: '{found_title[:40]}'")
                 continue
 
             discount_rate = round((1 - lprice / msrp) * 100, 1)
