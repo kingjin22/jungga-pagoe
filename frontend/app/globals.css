@@ -6,6 +6,15 @@
   --brand-light: #FF5252;
 }
 
+/* 커스텀 스크롤바 숨기기 */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 body {
   background: #f5f5f5;
   color: #1a1a1a;

@@ -212,6 +212,18 @@ async def sync_naver_deals(db: Session = Depends(get_db)):
     return {"synced": created, "message": f"{created}개 네이버 딜 동기화 완료"}
 
 
+@router.patch("/{deal_id}/expire")
+async def expire_deal(deal_id: int, db: Session = Depends(get_db)):
+    """딜 만료 처리"""
+    deal = db.query(Deal).filter(Deal.id == deal_id).first()
+    if not deal:
+        raise HTTPException(status_code=404, detail="딜을 찾을 수 없습니다")
+
+    deal.status = DealStatus.EXPIRED
+    db.commit()
+    return {"id": deal_id, "status": "expired", "message": "딜이 만료 처리되었습니다"}
+
+
 async def _convert_to_affiliate(deal: Deal, db: Session):
     """백그라운드: 쿠팡 파트너스 링크 변환"""
     affiliate_url = await coupang.get_affiliate_link(deal.product_url)

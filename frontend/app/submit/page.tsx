@@ -60,10 +60,35 @@ export default function SubmitPage() {
 
   if (success) {
     return (
-      <div className="max-w-lg mx-auto text-center py-20">
-        <div className="text-6xl mb-4">🎉</div>
-        <h2 className="text-2xl font-black text-[#E31E24] mb-2">제보 완료!</h2>
-        <p className="text-gray-600">딜이 등록되었습니다. 메인으로 이동합니다...</p>
+      <div className="max-w-lg mx-auto text-center py-16">
+        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-10">
+          {/* 성공 아이콘 */}
+          <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-5">
+            <span className="text-4xl">✅</span>
+          </div>
+
+          <h2 className="text-2xl font-black text-gray-900 mb-2">
+            딜 제보 완료!
+          </h2>
+          <p className="text-gray-500 mb-6">
+            소중한 딜 제보 감사합니다 🙏<br />
+            추천 10개 이상이면 <span className="text-[#E31E24] font-bold">🔥 HOT</span> 배지를 받아요!
+          </p>
+
+          {/* 구분선 */}
+          <div className="border-t border-gray-100 mb-6" />
+
+          <div className="text-sm text-gray-400 mb-6">
+            잠시 후 메인 페이지로 이동합니다...
+          </div>
+
+          <a
+            href="/"
+            className="inline-block bg-[#E31E24] text-white font-bold px-8 py-3 rounded-2xl hover:bg-[#B71C1C] transition-colors"
+          >
+            지금 메인으로 →
+          </a>
+        </div>
       </div>
     );
   }

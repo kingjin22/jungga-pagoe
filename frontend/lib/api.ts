@@ -116,3 +116,19 @@ export function getSourceColor(source: string): string {
   };
   return colors[source] || "bg-gray-500";
 }
+
+export interface Stats {
+  total_deals: number;
+  hot_deals: number;
+  by_source: { coupang: number; naver: number; community: number };
+  today_added: number;
+  avg_discount: number;
+}
+
+export async function getStats(): Promise<Stats> {
+  const res = await fetch(`${API_BASE}/api/stats`, {
+    next: { revalidate: 60 },
+  });
+  if (!res.ok) throw new Error("통계 불러오기 실패");
+  return res.json();
+}

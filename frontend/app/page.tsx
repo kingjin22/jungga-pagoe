@@ -3,6 +3,8 @@ import { getDeals, getHotDeals } from "@/lib/api";
 import DealCard from "@/components/DealCard";
 import HotBanner from "@/components/HotBanner";
 import SortBar from "@/components/SortBar";
+import StatsBar from "@/components/StatsBar";
+import { DealSkeletonGrid } from "@/components/DealSkeleton";
 import Link from "next/link";
 
 interface SearchParams {
@@ -39,6 +41,11 @@ export default async function HomePage({
 
   return (
     <div>
+      {/* 통계 바 */}
+      <Suspense fallback={null}>
+        <StatsBar />
+      </Suspense>
+
       {/* 핫딜 배너 (필터 없을 때만) */}
       {!isFiltered && hotDeals.length > 0 && (
         <HotBanner deals={hotDeals} />
@@ -60,21 +67,23 @@ export default async function HomePage({
       </Suspense>
 
       {/* 딜 그리드 */}
-      {dealsData.items.length === 0 ? (
-        <div className="text-center py-20 text-gray-400">
-          <div className="text-5xl mb-4">😢</div>
-          <p className="text-lg">해당하는 딜이 없어요</p>
-          <Link href="/" className="mt-4 inline-block text-[#E31E24] hover:underline">
-            전체 딜 보기
-          </Link>
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-          {dealsData.items.map((deal) => (
-            <DealCard key={deal.id} deal={deal} />
-          ))}
-        </div>
-      )}
+      <Suspense fallback={<DealSkeletonGrid count={10} />}>
+        {dealsData.items.length === 0 ? (
+          <div className="text-center py-20 text-gray-400">
+            <div className="text-5xl mb-4">😢</div>
+            <p className="text-lg">해당하는 딜이 없어요</p>
+            <Link href="/" className="mt-4 inline-block text-[#E31E24] hover:underline">
+              전체 딜 보기
+            </Link>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+            {dealsData.items.map((deal) => (
+              <DealCard key={deal.id} deal={deal} />
+            ))}
+          </div>
+        )}
+      </Suspense>
 
       {/* 페이지네이션 */}
       {dealsData.pages > 1 && (
