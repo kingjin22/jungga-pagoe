@@ -67,10 +67,16 @@ async def _sync_ppomppu():
         deals_data = await fetch_ppomppu_deals()
         created = 0
         for item in deals_data:
+            sale = item.get("sale_price", 0)
+            if sale < 0: continue
+            # 품질 기준: 이미지 있거나 실제 쇼핑몰 URL이 있어야 저장
+            has_image = bool(item.get("image_url"))
+            has_real_url = item["product_url"] and "ppomppu.co.kr" not in item["product_url"]
+            is_free = sale == 0  # 무료 딜은 이미지 없어도 저장
+            if not (has_image or has_real_url or is_free):
+                continue
             if db.deal_url_exists(item["product_url"]):
                 continue
-            sale = item.get("sale_price", 0)
-            if sale < 0: continue  # 음수 가격 제외 (무료는 0이므로 허용)
             dr = item.get("discount_rate", 0.0)
             db.create_deal({"title": item["title"], "description": item.get("description"),
                 "original_price": item.get("original_price", sale), "sale_price": sale,

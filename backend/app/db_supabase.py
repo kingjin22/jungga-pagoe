@@ -204,11 +204,11 @@ def get_stats() -> dict:
     today_kst_start = now_kst.replace(hour=0, minute=0, second=0, microsecond=0)
     today_utc_start = today_kst_start.astimezone(timezone.utc).isoformat()
 
-    total = sb.table("deals").select("id", count="exact").execute().count or 0
+    total = sb.table("deals").select("id", count="exact").in_("status", ["active", "price_changed"]).execute().count or 0
     hot = sb.table("deals").select("id", count="exact").eq("is_hot", True).in_("status", ["active", "price_changed"]).execute().count or 0
     expired = sb.table("deals").select("id", count="exact").eq("status", "expired").execute().count or 0
     price_changed = sb.table("deals").select("id", count="exact").eq("status", "price_changed").execute().count or 0
-    today_added = sb.table("deals").select("id", count="exact").gte("created_at", today_utc_start).execute().count or 0
+    today_added = sb.table("deals").select("id", count="exact").gte("created_at", today_utc_start).in_("status", ["active", "price_changed"]).execute().count or 0
 
     # 평균 할인율
     rates_res = sb.table("deals").select("discount_rate").in_("status", ["active", "price_changed"]).execute()
