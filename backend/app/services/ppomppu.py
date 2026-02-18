@@ -180,27 +180,41 @@ async def fetch_ppomppu_deals() -> list[dict]:
             except Exception as e:
                 print(f"  [뽐뿌/{name}] RSS 오류: {e}")
 
-    print(f"  [뽐뿌] RSS 파싱: {len(raw_deals)}개 → 이미지/상품URL 추출 시작...")
+    print(f"  [뽐뿌] RSS 파싱: {len(raw_deals)}개 → 상품URL + 이미지 추출 시작...")
 
-    # 각 포스트에서 실제 상품 URL + 이미지 병렬 추출 (최대 5개씩 배치)
+    from app.services.image_downloader import download_image
+
     enriched = []
     seen_product_urls = set()
 
     for i in range(0, len(raw_deals), 5):
         batch = raw_deals[i:i+5]
+
+        # 1단계: 상품 URL + CDN 이미지 URL 추출
         tasks = [enrich_deal_with_image(deal) for deal in batch]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
+        # 2단계: CDN 이미지 로컬 다운로드 (Referer 문제 해결)
+        dl_tasks = []
+        valid = []
         for deal in results:
             if isinstance(deal, Exception):
                 continue
             url = deal.get("product_url", "")
             if url and url not in seen_product_urls:
                 seen_product_urls.add(url)
-                enriched.append(deal)
+                valid.append(deal)
+                dl_tasks.append(download_image(deal.get("image_url") or ""))
 
-        # 서버 부하 방지
-        await asyncio.sleep(0.5)
+        dl_results = await asyncio.gather(*dl_tasks, return_exceptions=True)
+        for deal, local_path in zip(valid, dl_results):
+            if not isinstance(local_path, Exception) and local_path:
+                deal["image_url"] = local_path
+            enriched.append(deal)
 
-    print(f"[뽐뿌] 완료: {len(enriched)}개 (이미지 포함)")
+        await asyncio.sleep(0.3)
+
+    ok_img = sum(1 for d in enriched if d.get("image_url", "").startswith("/images/"))
+    ok_url = sum(1 for d in enriched if "ppomppu" not in d.get("product_url", ""))
+    print(f"[뽐뿌] 완료: {len(enriched)}개 | 로컬이미지: {ok_img}개 | 쇼핑몰URL: {ok_url}개")
     return enriched

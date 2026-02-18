@@ -64,8 +64,8 @@ export default function DealCard({ deal, onClick }: DealCardProps) {
             src={deal.image_url}
             alt={deal.title}
             fill
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
             className="object-cover"
-            unoptimized
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-4xl bg-gray-100">
