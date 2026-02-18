@@ -116,16 +116,16 @@ def get_hot_deals(limit: int = 10) -> list[dict]:
 
 def get_deal_by_id(deal_id: int) -> dict:
     sb = get_supabase()
-    res = sb.table("deals").select("*").eq("id", deal_id).maybe_single().execute()
+    res = sb.table("deals").select("*").eq("id", deal_id).limit(1).execute()
     if not res.data:
         return None
-    return _to_deal_dict(res.data)
+    return _to_deal_dict(res.data[0])
 
 
 def increment_views(deal_id: int) -> None:
     sb = get_supabase()
     # views + 1 (rpc 또는 read-modify-write)
-    current = sb.table("deals").select("views").eq("id", deal_id).maybe_single().execute()
+    current = sb.table("deals").select("views").eq("id", deal_id).limit(1).execute()
     if current.data:
         new_views = int(current.data.get("views", 0)) + 1
         sb.table("deals").update({"views": new_views}).eq("id", deal_id).execute()
@@ -133,7 +133,7 @@ def increment_views(deal_id: int) -> None:
 
 def upvote_deal(deal_id: int) -> dict:
     sb = get_supabase()
-    current = sb.table("deals").select("upvotes").eq("id", deal_id).maybe_single().execute()
+    current = sb.table("deals").select("upvotes").eq("id", deal_id).limit(1).execute()
     if not current.data:
         return None
     new_upvotes = int(current.data.get("upvotes", 0)) + 1
@@ -159,12 +159,11 @@ def deal_url_exists(product_url: str) -> bool:
     sb = get_supabase()
     res = (
         sb.table("deals")
-        .select("id")
+        .select("id", count="exact")
         .eq("product_url", product_url)
-        .maybe_single()
         .execute()
     )
-    return res.data is not None
+    return (res.count or 0) > 0
 
 
 def expire_deal(deal_id: int) -> dict:
