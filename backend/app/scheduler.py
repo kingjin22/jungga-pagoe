@@ -120,6 +120,36 @@ async def _verify_prices():
         logger.error(f"❌ 가격 검증 오류: {e}")
 
 
+async def _sync_brand_deals():
+    """브랜드 공식 정가 × 네이버 현재가 비교 → 실제 할인 딜"""
+    try:
+        import app.db_supabase as db
+        from app.services.brand_deals import collect_brand_deals
+        deals_data = await collect_brand_deals(min_discount=10)
+        created = 0
+        for item in deals_data:
+            if db.deal_url_exists(item["product_url"]):
+                continue
+            dr = item.get("discount_rate", 0)
+            db.create_deal({
+                "title": item["title"],
+                "description": item.get("description"),
+                "original_price": item["original_price"],
+                "sale_price": item["sale_price"],
+                "discount_rate": dr,
+                "image_url": item.get("image_url"),
+                "product_url": item["product_url"],
+                "source": "naver",
+                "category": item.get("category", "기타"),
+                "status": "active",
+                "is_hot": dr >= 20,
+            })
+            created += 1
+        logger.info(f"✅ 브랜드딜 sync: {created}개")
+    except Exception as e:
+        logger.error(f"❌ 브랜드딜 sync: {e}")
+
+
 async def _expire_old_deals():
     """3일 이상 된 딜 자동 만료"""
     try:
@@ -163,6 +193,13 @@ def start_scheduler():
         trigger=IntervalTrigger(hours=1),
         id="verify_prices",
         name="가격 검증 (자동 비활성)",
+        replace_existing=True,
+    )
+    scheduler.add_job(
+        _sync_brand_deals,
+        trigger=IntervalTrigger(hours=2),
+        id="sync_brand_deals",
+        name="브랜드딜 정가 비교 동기화 (2h)",
         replace_existing=True,
     )
     scheduler.add_job(
