@@ -137,14 +137,20 @@ async def fetch_ppomppu_deals() -> list[dict]:
         for deal, nav in zip(batch, results):
             if isinstance(nav, Exception):
                 nav = {}
+            # 가격/할인율은 뽐뿌 제목 기준 (신뢰성)
+            # 이미지/URL만 네이버에서 가져옴
+            sale = deal["sale_price"]
+            orig = deal["original_price"]
+            dr = deal["discount_rate"]
+
             enriched.append({
                 "title": deal["title"],
                 "description": deal["description"],
-                "sale_price": nav.get("naver_lprice") or deal["sale_price"],
-                "original_price": nav.get("naver_hprice") or deal["original_price"],
-                "discount_rate": deal["discount_rate"],
-                "image_url": nav.get("image_url"),
-                "product_url": nav.get("product_url") or deal["ppomppu_url"],
+                "sale_price": sale,
+                "original_price": orig,
+                "discount_rate": dr,
+                "image_url": nav.get("image_url"),                          # 네이버 이미지
+                "product_url": nav.get("product_url") or deal["ppomppu_url"],  # 네이버 URL
                 "category": nav.get("naver_category") or deal["category"],
                 "source": "community",
                 "submitter_name": "뽐뿌",

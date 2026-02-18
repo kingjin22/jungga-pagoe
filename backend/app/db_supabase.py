@@ -197,8 +197,9 @@ def get_deals_for_verify(cutoff_iso: str) -> list[dict]:
 
 def get_stats() -> dict:
     sb = get_supabase()
-    from datetime import date
-    today = date.today().isoformat()
+    from datetime import datetime, timezone, timedelta
+    KST = timezone(timedelta(hours=9))
+    today = datetime.now(KST).strftime("%Y-%m-%d")
 
     total = sb.table("deals").select("id", count="exact").execute().count or 0
     hot = sb.table("deals").select("id", count="exact").eq("is_hot", True).in_("status", ["active", "price_changed"]).execute().count or 0

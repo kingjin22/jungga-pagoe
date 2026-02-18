@@ -95,19 +95,25 @@ export default function DealModal({ deal, onClose }: DealModalProps) {
           {/* 가격 */}
           <div className="bg-gray-50 p-4 mb-4">
             <div className="flex items-baseline gap-2 mb-1">
-              <span className="text-2xl font-black text-[#E31E24]">
-                -{Math.round(deal.discount_rate)}%
-              </span>
+              {deal.discount_rate > 0 && (
+                <span className="text-2xl font-black text-[#E31E24]">
+                  -{Math.round(deal.discount_rate)}%
+                </span>
+              )}
               <span className="text-2xl font-black text-gray-900">
                 {formatPrice(deal.sale_price)}
               </span>
             </div>
-            <p className="text-sm text-gray-400 line-through">
-              정가 {formatPrice(deal.original_price)}
-            </p>
-            <p className="text-sm text-gray-600 mt-1 font-medium">
-              {formatPrice(saved)} 절약
-            </p>
+            {deal.discount_rate > 0 && (
+              <>
+                <p className="text-sm text-gray-400 line-through">
+                  정가 {formatPrice(deal.original_price)}
+                </p>
+                <p className="text-sm text-gray-600 mt-1 font-medium">
+                  {formatPrice(saved)} 절약
+                </p>
+              </>
+            )}
           </div>
 
           {/* 가격변동 경고 */}
