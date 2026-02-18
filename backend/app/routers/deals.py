@@ -6,7 +6,7 @@ import math
 from app.database import get_db
 from app.models.deal import Deal, DealSource, DealCategory, DealStatus
 from app.schemas.deal import DealResponse, DealListResponse, DealCreate, DealSubmitCommunity
-from app.services import coupang, naver
+from app.services import coupang, naver, ppomppu
 
 router = APIRouter(prefix="/api/deals", tags=["deals"])
 
@@ -185,7 +185,7 @@ async def sync_coupang_deals(db: Session = Depends(get_db)):
 @router.post("/sync/naver")
 async def sync_naver_deals(db: Session = Depends(get_db)):
     """네이버 API에서 딜 동기화 (관리자용)"""
-    deals_data = await naver.get_hot_deals()
+    deals_data = await naver.collect_real_deals(limit_per_keyword=8)
     created = 0
 
     for item in deals_data:
@@ -213,6 +213,54 @@ async def sync_naver_deals(db: Session = Depends(get_db)):
 
     db.commit()
     return {"synced": created, "message": f"{created}개 네이버 딜 동기화 완료"}
+
+
+@router.post("/sync/ppomppu")
+async def sync_ppomppu_deals(db: Session = Depends(get_db)):
+    """뽐뿌 RSS에서 실제 핫딜 동기화"""
+    deals_data = await ppomppu.fetch_ppomppu_deals()
+    created = 0
+
+    for item in deals_data:
+        existing = db.query(Deal).filter(Deal.product_url == item["product_url"]).first()
+        if existing:
+            continue
+
+        discount_rate = item.get("discount_rate") or calculate_discount_rate(
+            item["original_price"], item["sale_price"]
+        )
+        if discount_rate < 5:
+            continue
+
+        category_map = {
+            "전자기기": DealCategory.ELECTRONICS,
+            "패션": DealCategory.FASHION,
+            "식품": DealCategory.FOOD,
+            "뷰티": DealCategory.BEAUTY,
+            "홈리빙": DealCategory.HOME,
+            "스포츠": DealCategory.SPORTS,
+            "유아동": DealCategory.KIDS,
+        }
+
+        deal = Deal(
+            title=item["title"],
+            description=item.get("description"),
+            original_price=item["original_price"],
+            sale_price=item["sale_price"],
+            discount_rate=discount_rate,
+            image_url=item.get("image_url"),
+            product_url=item["product_url"],
+            source=DealSource.COMMUNITY,
+            category=category_map.get(item.get("category", "기타"), DealCategory.OTHER),
+            status=DealStatus.ACTIVE,
+            is_hot=discount_rate >= 40,
+            submitter_name="뽐뿌",
+        )
+        db.add(deal)
+        created += 1
+
+    db.commit()
+    return {"synced": created, "message": f"{created}개 뽐뿌 딜 동기화 완료"}
 
 
 @router.patch("/{deal_id}/expire")

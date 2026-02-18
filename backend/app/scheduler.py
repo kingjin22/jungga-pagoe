@@ -101,6 +101,54 @@ async def _sync_naver():
         logger.error(f"❌ 네이버 sync 오류: {e}")
 
 
+async def _sync_ppomppu():
+    """뽐뿌 핫딜 자동 동기화 (30분마다)"""
+    try:
+        from app.database import SessionLocal
+        from app.models.deal import Deal, DealSource, DealCategory, DealStatus
+        from app.services.ppomppu import fetch_ppomppu_deals
+
+        db = SessionLocal()
+        category_map = {
+            "전자기기": DealCategory.ELECTRONICS,
+            "패션": DealCategory.FASHION,
+            "식품": DealCategory.FOOD,
+            "뷰티": DealCategory.BEAUTY,
+            "홈리빙": DealCategory.HOME,
+            "스포츠": DealCategory.SPORTS,
+        }
+        try:
+            deals_data = await fetch_ppomppu_deals()
+            created = 0
+            for item in deals_data:
+                existing = db.query(Deal).filter(Deal.product_url == item["product_url"]).first()
+                if existing:
+                    continue
+                discount_rate = item.get("discount_rate", 15.0)
+                deal = Deal(
+                    title=item["title"],
+                    description=item.get("description"),
+                    original_price=item["original_price"],
+                    sale_price=item["sale_price"],
+                    discount_rate=discount_rate,
+                    image_url=item.get("image_url"),
+                    product_url=item["product_url"],
+                    source=DealSource.COMMUNITY,
+                    category=category_map.get(item.get("category", "기타"), DealCategory.OTHER),
+                    status=DealStatus.ACTIVE,
+                    is_hot=discount_rate >= 40,
+                    submitter_name="뽐뿌",
+                )
+                db.add(deal)
+                created += 1
+            db.commit()
+            logger.info(f"✅ 뽐뿌 자동 sync: {created}개 신규 딜")
+        finally:
+            db.close()
+    except Exception as e:
+        logger.error(f"❌ 뽐뿌 sync 오류: {e}")
+
+
 async def _verify_prices():
     """
     가격 검증 스케줄 작업
@@ -178,6 +226,13 @@ def start_scheduler():
         replace_existing=True,
     )
     scheduler.add_job(
+        _sync_ppomppu,
+        trigger=IntervalTrigger(minutes=30),
+        id="sync_ppomppu",
+        name="뽐뿌 핫딜 자동 동기화",
+        replace_existing=True,
+    )
+    scheduler.add_job(
         _verify_prices,
         trigger=IntervalTrigger(hours=1),
         id="verify_prices",
@@ -185,7 +240,7 @@ def start_scheduler():
         replace_existing=True,
     )
     scheduler.start()
-    logger.info("🕐 스케줄러 시작: 쿠팡(30분) / 네이버(1h) / 가격검증(1h)")
+    logger.info("🕐 스케줄러 시작: 쿠팡(30분) / 네이버(1h) / 뽐뿌(30분) / 가격검증(1h)")
 
 
 def stop_scheduler():
