@@ -18,29 +18,10 @@ HEADERS = {
     "Accept-Language": "ko-KR,ko;q=0.9",
 }
 
-SHOPPING_DOMAINS = [
-    "gmarket.co.kr", "link.gmarket.co.kr",
-    "auction.co.kr",
-    "11st.co.kr",
-    "coupang.com", "link.coupang.com",
-    "shopping.naver.com", "smartstore.naver.com",
-    "lotteon.com",
-    "ssg.com",
-    "kurly.com",
-    "oliveyoung.co.kr",
-    "kakao.com",
-    "interpark.com",
-    "homeplus.co.kr",
-    "bunjang.co.kr",
-    "musinsa.com",
-    "29cm.co.kr",
-    "amazon.com",
-    "aliexpress.com",
-]
-
-
 def _is_shopping_url(url: str) -> bool:
-    return any(domain in url for domain in SHOPPING_DOMAINS)
+    """뽐뿌 자체 도메인이 아닌 외부 URL이면 전부 상품 URL로 간주"""
+    excluded = ("ppomppu.co.kr", "cdn2.ppomppu", "google.", "facebook.", "twitter.", "t.co/")
+    return not any(x in url for x in excluded)
 
 
 async def get_og_image(url: str, timeout: float = 6.0) -> Optional[str]:

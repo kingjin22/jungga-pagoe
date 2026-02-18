@@ -1,7 +1,6 @@
 from fastapi import APIRouter, HTTPException, Query, BackgroundTasks
 from typing import Optional
 from app.schemas.deal import DealSubmitCommunity, DealResponse, DealListResponse
-from app.models.deal import DealCategory, DealSource
 import app.db_supabase as db
 
 router = APIRouter(prefix="/api/deals", tags=["deals"])
@@ -58,6 +57,9 @@ async def submit_community_deal(
     if discount_rate < 10:
         raise HTTPException(status_code=400, detail="할인율이 10% 이상인 딜만 제보 가능합니다")
 
+    from app.services.categorizer import infer_category
+    category = deal_data.category or infer_category(deal_data.title)
+
     payload = {
         "title": deal_data.title,
         "description": deal_data.description,
@@ -66,7 +68,7 @@ async def submit_community_deal(
         "discount_rate": discount_rate,
         "image_url": deal_data.image_url,
         "product_url": deal_data.product_url,
-        "category": deal_data.category,
+        "category": category,
         "source": "community",
         "submitter_name": deal_data.submitter_name or "익명",
         "status": "active",

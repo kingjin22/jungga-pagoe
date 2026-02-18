@@ -1,7 +1,6 @@
-from pydantic import BaseModel, HttpUrl, validator
+from pydantic import BaseModel, validator
 from typing import Optional
 from datetime import datetime
-from app.models.deal import DealSource, DealCategory, DealStatus
 
 
 class DealBase(BaseModel):
@@ -11,8 +10,8 @@ class DealBase(BaseModel):
     sale_price: float
     image_url: Optional[str] = None
     product_url: str
-    category: DealCategory = DealCategory.OTHER
-    source: DealSource = DealSource.COMMUNITY
+    category: str = "기타"   # 자유 텍스트 — enum 아님
+    source: str = "community"
 
 
 class DealCreate(DealBase):
@@ -27,27 +26,28 @@ class DealCreate(DealBase):
         return v
 
 
-class DealUpdate(BaseModel):
-    title: Optional[str] = None
-    description: Optional[str] = None
-    original_price: Optional[float] = None
-    sale_price: Optional[float] = None
-    status: Optional[DealStatus] = None
-    is_hot: Optional[bool] = None
-
-
-class DealResponse(DealBase):
+class DealResponse(BaseModel):
     id: int
+    title: str
+    description: Optional[str] = None
+    original_price: float
+    sale_price: float
     discount_rate: float
+    image_url: Optional[str] = None
+    product_url: str
     affiliate_url: Optional[str] = None
-    status: DealStatus
+    source: str
+    category: str
+    status: str
     upvotes: int
     views: int
     is_hot: bool
     submitter_name: Optional[str] = None
-    expires_at: Optional[datetime] = None
-    created_at: datetime
-    updated_at: datetime
+    expires_at: Optional[str] = None
+    verified_price: Optional[float] = None
+    last_verified_at: Optional[str] = None
+    created_at: str
+    updated_at: str
 
     class Config:
         from_attributes = True
@@ -62,12 +62,12 @@ class DealListResponse(BaseModel):
 
 
 class DealSubmitCommunity(BaseModel):
-    """커뮤니티 딜 제보용 스키마"""
+    """커뮤니티 딜 제보 — 카테고리 자유 입력"""
     title: str
     original_price: float
     sale_price: float
     product_url: str
     image_url: Optional[str] = None
-    category: DealCategory = DealCategory.OTHER
+    category: Optional[str] = None   # 없으면 타이틀로 자동 추론
     description: Optional[str] = None
     submitter_name: Optional[str] = "익명"

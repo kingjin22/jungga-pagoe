@@ -24,17 +24,7 @@ PRICE_PATTERNS = [
     r'\$([0-9.]+)',                           # $12.99
 ]
 
-# 카테고리 키워드 매핑
-CATEGORY_KEYWORDS = {
-    "전자기기": ["이어폰", "청소기", "노트북", "태블릿", "스마트폰", "갤럭시", "아이폰",
-                 "모니터", "키보드", "마우스", "충전기", "보조배터리", "TV", "에어컨"],
-    "패션": ["운동화", "패딩", "코트", "자켓", "신발", "나이키", "아디다스", "뉴발란스"],
-    "식품": ["커피", "과자", "음료", "식품", "고기", "쌀", "라면", "과일", "배달"],
-    "뷰티": ["스킨케어", "선크림", "마스크팩", "샴푸", "화장품"],
-    "홈리빙": ["공기청정기", "가습기", "냄비", "프라이팬", "청소", "침구", "매트리스"],
-    "스포츠": ["러닝화", "헬스", "요가", "등산", "수영", "골프"],
-    "식품": ["편의점", "마트", "쿠폰", "할인", "1+1"],
-}
+# 카테고리 추론은 services/categorizer.py 참조
 
 
 def _clean_title(title: str) -> str:
@@ -81,13 +71,8 @@ def _extract_discount_from_title(title: str) -> Optional[float]:
 
 
 def _guess_category(title: str) -> str:
-    """제목에서 카테고리 추정"""
-    title_lower = title.lower()
-    for category, keywords in CATEGORY_KEYWORDS.items():
-        for kw in keywords:
-            if kw.lower() in title_lower:
-                return category
-    return "기타"
+    from app.services.categorizer import infer_category
+    return infer_category(title)
 
 
 def _is_valid_deal(title: str) -> bool:
