@@ -1,0 +1,37 @@
+@import "tailwindcss";
+
+:root {
+  --brand: #E31E24;
+  --brand-dark: #B71C1C;
+  --brand-light: #FF5252;
+}
+
+body {
+  background: #f5f5f5;
+  color: #1a1a1a;
+}
+
+/* 딜 카드 hover 효과 */
+.deal-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.deal-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+}
+
+/* 핫딜 깜빡임 */
+@keyframes pulse-hot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.hot-badge {
+  animation: pulse-hot 1.5s infinite;
+}
+
+/* 할인율 크기별 색상 */
+.discount-low { color: #f59e0b; }
+.discount-mid { color: #ef4444; }
+.discount-high { color: #E31E24; font-weight: 800; }
