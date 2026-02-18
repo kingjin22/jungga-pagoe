@@ -146,3 +146,66 @@ async def collect_real_deals(limit_per_keyword: int = 10) -> list[dict]:
 async def get_hot_deals() -> list[dict]:
     """스케줄러용 — collect_real_deals 호출"""
     return await collect_real_deals(limit_per_keyword=5)
+
+
+def _clean_search_title(title: str) -> str:
+    """뽐뿌 제목에서 검색어 추출 — 쇼핑몰 태그/가격/배송 제거"""
+    import re
+    # [G마켓], [옥션] 등 앞 태그 제거
+    title = re.sub(r"^\s*[\[\(【]?[^\]）】]{1,15}[\]\)】]\s*", "", title)
+    # (24,440원/무료), (14,900원) 등 가격 제거
+    title = re.sub(r"[\(\（][0-9,]+원[^\)）]*[\)\）]", "", title)
+    # /무료, /유료 제거
+    title = re.sub(r"/\s*(무료|유료|직배)", "", title)
+    # 특수문자 정리
+    title = re.sub(r"[^\w\s가-힣a-zA-Z0-9]", " ", title)
+    return title.strip()[:50]
+
+
+async def search_product(title: str) -> dict:
+    """
+    뽐뿌 딜 제목으로 네이버 쇼핑 검색
+    → 이미지/가격/URL 반환 (없으면 빈 dict)
+    """
+    if not settings.NAVER_CLIENT_ID:
+        return {}
+
+    query = _clean_search_title(title)
+    if not query:
+        return {}
+
+    headers = {
+        "X-Naver-Client-Id": settings.NAVER_CLIENT_ID,
+        "X-Naver-Client-Secret": settings.NAVER_CLIENT_SECRET,
+    }
+
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.get(
+                f"{NAVER_API_BASE}/search/shop.json",
+                headers=headers,
+                params={"query": query, "display": 3, "sort": "sim"},
+                timeout=8.0,
+            )
+            resp.raise_for_status()
+            items = resp.json().get("items", [])
+        except Exception:
+            return {}
+
+    if not items:
+        return {}
+
+    # 첫 번째 결과 사용
+    item = items[0]
+    lprice = int(item.get("lprice", 0) or 0)
+    hprice = int(item.get("hprice", 0) or 0)
+    image = item.get("image", "")
+    link = item.get("link", "")
+
+    return {
+        "image_url": image if image.startswith("http") else None,
+        "product_url": link if link.startswith("http") else None,
+        "naver_lprice": float(lprice) if lprice > 0 else None,
+        "naver_hprice": float(hprice) if hprice > 0 else None,
+        "naver_category": _map_category(item.get("category1", "")),
+    }
