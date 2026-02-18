@@ -69,13 +69,16 @@ async def _sync_ppomppu():
         for item in deals_data:
             if db.deal_url_exists(item["product_url"]):
                 continue
-            dr = item.get("discount_rate", 15.0)
+            sale = item.get("sale_price", 0)
+            if sale < 0: continue  # 음수 가격 제외 (무료는 0이므로 허용)
+            dr = item.get("discount_rate", 0.0)
             db.create_deal({"title": item["title"], "description": item.get("description"),
-                "original_price": item["original_price"], "sale_price": item["sale_price"],
+                "original_price": item.get("original_price", sale), "sale_price": sale,
                 "discount_rate": dr, "image_url": item.get("image_url"),
                 "product_url": item["product_url"], "source": "community",
                 "category": item.get("category", "기타"), "status": "active",
-                "is_hot": dr >= 40, "submitter_name": "뽐뿌"})
+                "is_hot": dr >= 20 or item.get("is_hot", False),
+                "submitter_name": item.get("submitter_name", "뽐뿌")})
             created += 1
         logger.info(f"✅ 뽐뿌 sync: {created}개")
     except Exception as e:
@@ -117,6 +120,21 @@ async def _verify_prices():
         logger.error(f"❌ 가격 검증 오류: {e}")
 
 
+async def _expire_old_deals():
+    """3일 이상 된 딜 자동 만료"""
+    try:
+        import app.db_supabase as db
+        from datetime import datetime, timezone, timedelta
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=3)).isoformat()
+        sb = db.get_supabase()
+        result = sb.table("deals").update({"status": "expired"}).eq("status", "active").lt("created_at", cutoff).execute()
+        count = len(result.data) if result.data else 0
+        if count:
+            logger.info(f"✅ 오래된 딜 만료: {count}개")
+    except Exception as e:
+        logger.error(f"❌ 딜 만료 처리 오류: {e}")
+
+
 def start_scheduler():
     """스케줄러 시작"""
     scheduler.add_job(
@@ -147,8 +165,17 @@ def start_scheduler():
         name="가격 검증 (자동 비활성)",
         replace_existing=True,
     )
+    scheduler.add_job(
+        _expire_old_deals,
+        trigger=IntervalTrigger(hours=6),
+        id="expire_old_deals",
+        name="오래된 딜 자동 만료 (3일 이상)",
+        replace_existing=True,
+    )
     scheduler.start()
-    logger.info("🕐 스케줄러 시작: 쿠팡(30분) / 네이버(1h) / 뽐뿌(30분) / 가격검증(1h)")
+    msg = "🕐 스케줄러 시작: 쿠팡(30분) / 네이버(1h) / 뽐뿌(30분) / 가격검증(1h) / 만료처리(6h)"
+    logger.info(msg)
+    print(msg, flush=True)  # uvicorn stdout에도 출력
 
 
 def stop_scheduler():
