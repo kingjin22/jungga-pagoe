@@ -7,6 +7,7 @@ import StatsBar from "@/components/StatsBar";
 import CategoryFilter from "@/components/CategoryFilter";
 import { DealGridSkeleton } from "@/components/DealSkeleton";
 import PageViewTracker from "@/components/PageViewTracker";
+import AdBanner from "@/components/AdBanner";
 import Link from "next/link";
 
 interface SearchParams {
@@ -108,9 +109,20 @@ export default async function HomePage({
             </Link>
           </div>
         ) : (
+          <>
+          {/* 광고 배너 — HotBanner 아래, 딜 그리드 위 */}
+          {process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID && (
+            <AdBanner
+              slot={process.env.NEXT_PUBLIC_ADSENSE_SLOT_TOP || ""}
+              format="horizontal"
+              className="my-4"
+            />
+          )}
+
           <Suspense fallback={<DealGridSkeleton count={20} />}>
             <DealGrid deals={dealsData.items} />
           </Suspense>
+          </>
         )}
 
         {/* 페이지네이션 */}
