@@ -56,6 +56,11 @@ async def _sync_naver():
 
 
 async def _sync_ppomppu():
+    # 가격 신뢰성 문제로 임시 비활성화
+    # 커뮤니티 딜은 수집 당시 가격과 실제 판매가 불일치 → 신뢰성 훼손
+    # TODO: 실시간 가격 크롤링 구현 후 재활성화
+    logger.info("⏸ 뽐뿌 sync 비활성화 (가격 신뢰성 개선 작업 중)")
+    return
     try:
         import app.db_supabase as db
         from app.services.ppomppu import fetch_ppomppu_deals
@@ -122,7 +127,9 @@ async def _sync_ppomppu():
 
 
 async def _sync_naver_cafe():
-    """정가거부 카페 핫딜 게시판 수집 → Naver Shopping 시세 검증 → DB 저장"""
+    # 가격 신뢰성 문제로 임시 비활성화 (카페 URL → 실제 쇼핑몰 가격 검증 불가)
+    logger.info("⏸ 정가거부 카페 sync 비활성화")
+    return
     try:
         import app.db_supabase as db
         from app.services.naver_cafe import fetch_naver_cafe_deals
