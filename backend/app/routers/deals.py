@@ -57,6 +57,27 @@ async def get_deal(deal_id: int):
             )
             deal["price_stats"] = stats
             deal["trust"] = trust
+
+            # 차트용 히스토리 (날짜별 price 배열)
+            try:
+                import hashlib
+                product_key = hashlib.md5(f"{brand}|{query}".encode()).hexdigest()[:16]
+                rows = (
+                    sb.table("price_history")
+                    .select("price,recorded_at")
+                    .eq("product_key", product_key)
+                    .order("recorded_at")
+                    .execute()
+                    .data
+                ) or []
+                chart_data = []
+                for r in rows:
+                    dt = r["recorded_at"][:10]   # "2026-02-19"
+                    mo, day = dt[5:7], dt[8:10]
+                    chart_data.append({"date": f"{mo}/{day}", "price": int(r["price"])})
+                deal["chart_data"] = chart_data
+            except Exception:
+                deal["chart_data"] = []
         except Exception:
             pass
 

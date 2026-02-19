@@ -6,7 +6,7 @@ import CategoryFilter from "@/components/CategoryFilter";
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
 
 // 슬러그 → 브랜드명 변환
-async function getBrands(): Promise<{ brand: string; slug: string; count: number }[]> {
+async function getBrands(): Promise<{ brand: string; slug: string; count: number; avg_discount: number }[]> {
   const res = await fetch(`${API_BASE}/api/brands`, { next: { revalidate: 300 } });
   if (!res.ok) return [];
   return res.json();
@@ -31,8 +31,9 @@ const BRAND_DESC: Record<string, string> = {
   Patagonia: "파타고니아 다운재킷, 플리스 등 프리미엄 아웃도어 브랜드의 실제 할인 정보.",
 };
 
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
-  const brandInfo = await getBrandBySlug(params.slug);
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const brandInfo = await getBrandBySlug(slug);
   if (!brandInfo) return { title: "브랜드 없음 | 정가파괴" };
 
   const { brand, count } = brandInfo;
@@ -46,8 +47,9 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   };
 }
 
-export default async function BrandPage({ params }: { params: { slug: string } }) {
-  const brandInfo = await getBrandBySlug(params.slug);
+export default async function BrandPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const brandInfo = await getBrandBySlug(slug);
   if (!brandInfo) {
     return (
       <div className="max-w-screen-xl mx-auto px-4 py-20 text-center text-gray-400">
@@ -86,6 +88,11 @@ export default async function BrandPage({ params }: { params: { slug: string } }
           <div className="flex items-baseline gap-3 mb-2">
             <h1 className="text-2xl font-bold text-gray-900">{brand}</h1>
             <span className="text-sm text-gray-400">현재 딜 {count}개</span>
+            {brandInfo.avg_discount > 0 && (
+              <span className="text-sm font-bold text-[#E31E24]">
+                평균 -{brandInfo.avg_discount}%
+              </span>
+            )}
           </div>
           <p className="text-sm text-gray-500 leading-relaxed max-w-2xl">{desc}</p>
         </div>

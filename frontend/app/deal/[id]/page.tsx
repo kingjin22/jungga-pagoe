@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { getDeal, formatPrice } from "@/lib/api";
+import PriceChart from "@/components/PriceChart";
 
 const BASE_URL = "https://jungga-pagoe.vercel.app";
 
@@ -15,9 +16,10 @@ function slugify(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 
-export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
   try {
-    const deal = await getDeal(Number(params.id));
+    const deal = await getDeal(Number(id));
     const dr = Math.round(deal.discount_rate);
     const price = formatPrice(deal.sale_price);
     const title = deal.title.replace(/^\[[^\]]+\]\s*/, ""); // [브랜드] 제거
@@ -32,7 +34,7 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
         type: "website",
       },
       alternates: {
-        canonical: `${BASE_URL}/deal/${params.id}`,
+        canonical: `${BASE_URL}/deal/${id}`,
       },
     };
   } catch {
@@ -40,10 +42,11 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
   }
 }
 
-export default async function DealPage({ params }: { params: { id: string } }) {
+export default async function DealPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   let deal: any;
   try {
-    deal = await getDeal(Number(params.id));
+    deal = await getDeal(Number(id));
   } catch {
     notFound();
   }
@@ -179,6 +182,19 @@ export default async function DealPage({ params }: { params: { id: string } }) {
                     {deal.price_stats.data_days}일간 수집 | 최저 {formatPrice(deal.price_stats.min_price)} | 평균 {formatPrice(deal.price_stats.avg_price)}
                   </p>
                 )}
+              </div>
+            )}
+
+            {/* 가격 히스토리 차트 */}
+            {deal.source === "naver" && (
+              <div className="mb-5">
+                <p className="text-xs font-bold text-gray-600 mb-2">가격 추이</p>
+                <PriceChart
+                  data={(deal as any).chart_data || []}
+                  currentPrice={deal.sale_price}
+                  minPrice={(deal as any).price_stats?.min_price}
+                  avgPrice={(deal as any).price_stats?.avg_price}
+                />
               </div>
             )}
 

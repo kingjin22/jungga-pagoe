@@ -46,35 +46,34 @@ async def get_brands():
 
     deals = (
         sb.table("deals")
-        .select("title,submitter_name,source")
+        .select("title,submitter_name,source,discount_rate")
         .in_("status", ["active", "price_changed"])
         .execute()
         .data
     )
 
-    brand_counts: dict[str, int] = {}
+    brand_data: dict[str, dict] = {}
     for d in deals:
         brand = d.get("submitter_name") or ""
         if not brand:
             m = re.match(r'^\[([^\]]+)\]', d.get("title", ""))
             brand = m.group(1).strip() if m else ""
-
-        if not brand:
+        if not brand or brand.lower() in RETAILER_EXCLUDE:
             continue
-        # 리테일러 제외
-        if brand.lower() in RETAILER_EXCLUDE:
-            continue
-        brand_counts[brand] = brand_counts.get(brand, 0) + 1
+        if brand not in brand_data:
+            brand_data[brand] = {"count": 0, "discount_sum": 0.0}
+        brand_data[brand]["count"] += 1
+        brand_data[brand]["discount_sum"] += float(d.get("discount_rate") or 0)
 
     def to_slug(name: str) -> str:
-        # 영문/숫자만 슬러그로 (한글 브랜드는 제외)
         slug = re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-')
         return slug
 
     result = []
-    for b, c in sorted(brand_counts.items(), key=lambda x: -x[1]):
+    for b, v in sorted(brand_data.items(), key=lambda x: -x[1]["count"]):
         slug = to_slug(b)
-        if slug:  # 슬러그가 있는(영문) 브랜드만 페이지 생성
-            result.append({"brand": b, "slug": slug, "count": c})
+        if slug:
+            avg_dr = round(v["discount_sum"] / v["count"], 1) if v["count"] else 0
+            result.append({"brand": b, "slug": slug, "count": v["count"], "avg_discount": avg_dr})
 
     return result
