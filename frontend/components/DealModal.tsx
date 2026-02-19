@@ -141,18 +141,24 @@ export default function DealModal({ deal, onClose }: DealModalProps) {
 
           {/* 신뢰 뱃지 */}
           <div className="flex flex-wrap gap-1.5 mb-4">
-            <span className="inline-flex items-center gap-1 text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-sm font-medium">
-              ✓ 정가 검증 완료
-            </span>
-            {deal.discount_rate > 0 && deal.discount_rate <= 65 && (
-              <span className="inline-flex items-center gap-1 text-[10px] text-blue-700 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-sm font-medium">
-                ✓ 이상 할인율 없음
-              </span>
-            )}
-            {deal.source === "naver" && (
-              <span className="inline-flex items-center gap-1 text-[10px] text-gray-600 bg-gray-50 border border-gray-100 px-2 py-0.5 rounded-sm font-medium">
-                ✓ 공식 판매처 확인
-              </span>
+            {deal.source === "naver" ? (
+              <>
+                <span className="inline-flex items-center gap-1 text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-sm font-medium">
+                  ✓ MSRP 정가 대비 할인
+                </span>
+                <span className="inline-flex items-center gap-1 text-[10px] text-blue-700 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-sm font-medium">
+                  ✓ 네이버 최저가 기준
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="inline-flex items-center gap-1 text-[10px] text-orange-700 bg-orange-50 border border-orange-100 px-2 py-0.5 rounded-sm font-medium">
+                  커뮤니티 제보 딜
+                </span>
+                <span className="inline-flex items-center gap-1 text-[10px] text-gray-600 bg-gray-50 border border-gray-100 px-2 py-0.5 rounded-sm font-medium">
+                  판매처 가격 직접 확인 권장
+                </span>
+              </>
             )}
           </div>
 
