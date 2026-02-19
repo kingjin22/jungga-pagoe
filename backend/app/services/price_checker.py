@@ -113,7 +113,7 @@ def evaluate_price_change(
 ) -> dict:
     """
     가격 변동 평가
-    Returns: {action: "ok" | "price_changed" | "expired", change_pct: float}
+    Returns: {action: "ok" | "price_dropped" | "price_changed" | "expired", change_pct: float}
     """
     if registered_price <= 0:
         return {"action": "ok", "change_pct": 0.0}
@@ -125,8 +125,8 @@ def evaluate_price_change(
     elif change_pct >= PRICE_CHANGE_THRESHOLD:
         return {"action": "price_changed", "change_pct": round(change_pct * 100, 1)}
     elif change_pct < -0.05:
-        # 5% 이상 더 떨어짐 → 여전히 유효하고 더 좋은 딜
-        return {"action": "ok", "change_pct": round(change_pct * 100, 1)}
+        # 5% 이상 더 떨어짐 → sale_price 업데이트 필요 (표시 가격 = 실제 최저가)
+        return {"action": "price_dropped", "change_pct": round(change_pct * 100, 1)}
     else:
         return {"action": "ok", "change_pct": round(change_pct * 100, 1)}
 

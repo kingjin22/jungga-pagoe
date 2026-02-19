@@ -215,6 +215,17 @@ async def _verify_prices():
                     patch["status"] = "expired"; patch["verify_fail_count"] = 0; expired_count += 1
                 elif action == "price_changed":
                     patch["status"] = "price_changed"; patch["verify_fail_count"] = 0; changed += 1
+                elif action == "price_dropped":
+                    # 네이버 최저가 < 우리 표시가 → sale_price 업데이트 (정확성 유지 핵심!)
+                    new_price = check["verified_price"]
+                    orig = float(deal.get("original_price") or 0)
+                    patch["sale_price"] = new_price
+                    patch["status"] = "active"
+                    patch["verify_fail_count"] = 0
+                    if orig > 0 and new_price < orig:
+                        patch["discount_rate"] = round((1 - new_price / orig) * 100, 1)
+                    ok += 1
+                    logger.info(f"    ↓ 가격 업데이트: {int(deal.get('sale_price',0)):,} → {int(new_price):,}원")
                 else:
                     patch["status"] = "active"; patch["verify_fail_count"] = 0; ok += 1
                 db.update_deal_verify(deal["id"], patch)
