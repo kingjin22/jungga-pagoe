@@ -225,6 +225,18 @@ def get_stats() -> dict:
     naver_count = sb.table("deals").select("id", count="exact").eq("source", "naver").in_("status", active_statuses).execute().count or 0
     community_count = sb.table("deals").select("id", count="exact").eq("source", "community").in_("status", active_statuses).execute().count or 0
 
+    # 오늘 방문자 수 (page_view 이벤트)
+    today_utc_end = (today_kst_start + timedelta(days=1)).astimezone(timezone.utc).isoformat()
+    try:
+        pv_res = sb.table("event_logs").select("id", count="exact") \
+            .eq("event_type", "page_view") \
+            .gte("created_at", today_utc_start) \
+            .lt("created_at", today_utc_end) \
+            .execute()
+        today_visitors = pv_res.count or 0
+    except Exception:
+        today_visitors = 0
+
     return {
         "total_deals": total,
         "hot_deals": hot,
@@ -233,6 +245,7 @@ def get_stats() -> dict:
         "avg_discount": avg_discount,
         "expired": expired,
         "price_changed": price_changed,
+        "today_visitors": today_visitors,
     }
 
 

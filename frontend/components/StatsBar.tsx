@@ -26,6 +26,7 @@ export default async function StatsBar() {
 
   const avgDiscount = stats.avg_discount > 0 ? `${stats.avg_discount}%` : "-";
   const items = [
+    ...(stats.today_visitors > 0 ? [{ label: "오늘 방문자", value: `${stats.today_visitors.toLocaleString()}명`, highlight: true }] : []),
     { label: "전체 딜", value: `${stats.total_deals.toLocaleString()}개` },
     { label: "HOT 딜", value: `${stats.hot_deals.toLocaleString()}개` },
     { label: "평균 할인율", value: avgDiscount },
@@ -41,7 +42,7 @@ export default async function StatsBar() {
           {items.map((item) => (
             <div key={item.label} className="flex items-center gap-2 shrink-0">
               <span className="text-[11px] text-gray-400">{item.label}</span>
-              <span className="text-[13px] font-bold text-gray-900">{item.value}</span>
+              <span className={`text-[13px] font-bold ${'highlight' in item && item.highlight ? "text-[#E31E24]" : "text-gray-900"}`}>{item.value}</span>
             </div>
           ))}
           {/* 실시간 업데이트 표시 */}
