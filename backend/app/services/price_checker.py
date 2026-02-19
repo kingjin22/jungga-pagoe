@@ -19,10 +19,39 @@ EXPIRE_THRESHOLD = 0.20          # 20% 이상 오르면 자동 만료
 MAX_FAIL_COUNT = 3               # 연속 3번 실패 시 만료 처리
 
 
+async def check_naver_price_by_id(product_id: str) -> Optional[float]:
+    """
+    네이버 productId로 정확한 현재 최저가 조회 (검색 오차 없음)
+    catalog URL에서 사용: search.shopping.naver.com/catalog/{productId}
+    """
+    if not settings.NAVER_CLIENT_ID or not product_id:
+        return None
+    headers = {
+        "X-Naver-Client-Id": settings.NAVER_CLIENT_ID,
+        "X-Naver-Client-Secret": settings.NAVER_CLIENT_SECRET,
+    }
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.get(
+                "https://openapi.naver.com/v1/search/shop.json",
+                headers=headers,
+                params={"query": product_id, "display": 1, "sort": "sim"},
+                timeout=8.0,
+            )
+            resp.raise_for_status()
+            items = resp.json().get("items", [])
+            for item in items:
+                if str(item.get("productId", "")) == str(product_id):
+                    lprice = int(item.get("lprice", 0) or 0)
+                    return float(lprice) if lprice > 0 else None
+        except Exception as e:
+            print(f"  [ID가격체크] 오류: {e}")
+    return None
+
+
 async def check_naver_price(title: str, registered_price: float) -> Optional[float]:
     """
-    네이버 쇼핑 API로 현재 최저가 조회
-    유사 상품 중 가장 가까운 가격 반환
+    네이버 쇼핑 API로 현재 최저가 조회 (제목 검색 방식)
     """
     if not settings.NAVER_CLIENT_ID:
         return None
@@ -32,10 +61,8 @@ async def check_naver_price(title: str, registered_price: float) -> Optional[flo
         "X-Naver-Client-Secret": settings.NAVER_CLIENT_SECRET,
     }
 
-    # 제목에서 핵심 키워드 추출 (괄호, 특수문자 제거)
     clean_title = re.sub(r"[\[\]()【】\{\}]", " ", title)
     clean_title = re.sub(r"\s+", " ", clean_title).strip()
-    # 앞 30자만 사용 (핵심 키워드 위주)
     search_query = clean_title[:40]
 
     async with httpx.AsyncClient() as client:
@@ -43,35 +70,23 @@ async def check_naver_price(title: str, registered_price: float) -> Optional[flo
             resp = await client.get(
                 "https://openapi.naver.com/v1/search/shop.json",
                 headers=headers,
-                params={
-                    "query": search_query,
-                    "display": 10,
-                    "sort": "asc",  # 가격 낮은순
-                },
+                params={"query": search_query, "display": 10, "sort": "asc"},
                 timeout=8.0,
             )
             resp.raise_for_status()
             items = resp.json().get("items", [])
-
             if not items:
                 return None
-
-            # 등록 가격과 가장 가까운 상품의 최저가 반환
             prices = [int(item.get("lprice", 0)) for item in items if item.get("lprice")]
             if not prices:
                 return None
-
-            # 등록 가격의 50%~200% 범위 내 가격만 유효한 것으로 판단
             valid_prices = [
                 p for p in prices
                 if registered_price * 0.5 <= p <= registered_price * 2.0
             ]
-
             if not valid_prices:
                 return None
-
-            return float(min(valid_prices))  # 최저가 반환
-
+            return float(min(valid_prices))
         except Exception as e:
             print(f"  [가격체크] 네이버 API 오류: {e}")
             return None
@@ -147,10 +162,17 @@ async def verify_deal(deal) -> dict:
         result["action"] = "url_dead"
         return result
 
-    # 2. 가격 확인
+    # 2. 가격 확인 — productId 있으면 정확히, 없으면 키워드 검색
     current_price = None
+    naver_product_id = deal.get("naver_product_id") if isinstance(deal, dict) else getattr(deal, "naver_product_id", None)
+
     if deal_source in ("naver", "community"):
-        current_price = await check_naver_price(str(deal_title), float(deal_sale_price or 0))
+        if naver_product_id:
+            # productId로 직접 조회 → 정확한 현재 최저가
+            current_price = await check_naver_price_by_id(str(naver_product_id))
+        if current_price is None:
+            # fallback: 제목 키워드 검색
+            current_price = await check_naver_price(str(deal_title), float(deal_sale_price or 0))
 
     if current_price is not None:
         result["verified_price"] = current_price

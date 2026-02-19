@@ -271,9 +271,9 @@ def start_scheduler():
     )
     scheduler.add_job(
         _verify_prices,
-        trigger=IntervalTrigger(hours=1),
+        trigger=IntervalTrigger(minutes=30),
         id="verify_prices",
-        name="가격 검증 (자동 비활성)",
+        name="가격 검증 (30분마다)",
         replace_existing=True,
     )
     scheduler.add_job(

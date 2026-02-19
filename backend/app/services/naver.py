@@ -104,13 +104,23 @@ async def search_with_real_discount(keyword: str, display: int = 20) -> list[dic
         else:
             discount_rate = 0.0  # 할인율 불명 → 수집은 하되 뱃지 미표시
 
+        # ★ 카탈로그 URL 우선: productType=1이면 네이버 최저가 비교 페이지로 연결
+        # → 사용자가 클릭하면 항상 현재 최저가가 표시됨 (가격 불일치 방지)
+        product_id = item.get("productId", "")
+        product_type = str(item.get("productType", "2"))
+        if product_type == "1" and product_id:
+            product_url = f"https://search.shopping.naver.com/catalog/{product_id}"
+        else:
+            product_url = item.get("link", "")
+
         deals.append({
             "title": title,
             "original_price": float(hprice) if hprice > 0 else float(lprice),
             "sale_price": float(lprice),
             "discount_rate": discount_rate,
             "image_url": item.get("image", ""),
-            "product_url": item.get("link", ""),
+            "product_url": product_url,
+            "naver_product_id": product_id,
             "affiliate_url": None,
             "source": "naver",
             "category": _map_category(item.get("category1", "")),

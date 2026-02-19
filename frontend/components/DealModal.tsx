@@ -4,6 +4,16 @@ import { useEffect, useState } from "react";
 import { Deal, formatPrice, reportDeal, getDeal } from "@/lib/api";
 import { trackEvent } from "@/lib/tracking";
 
+function formatVerifiedTime(isoStr: string): string {
+  try {
+    const diff = Math.floor((Date.now() - new Date(isoStr).getTime()) / 60000);
+    if (diff < 1) return "방금 확인";
+    if (diff < 60) return `${diff}분 전 확인`;
+    const h = Math.floor(diff / 60);
+    return `${h}시간 전 확인`;
+  } catch { return "최근 확인"; }
+}
+
 const SOURCE_LABEL: Record<string, string> = {
   coupang: "쿠팡",
   naver: "네이버",
@@ -198,16 +208,26 @@ export default function DealModal({ deal, onClose }: DealModalProps) {
             )}
           </div>
 
-          {/* 가격변동 경고 */}
-          {d.status === "price_changed" && (
+          {/* 가격 검증 상태 */}
+          {d.status === "price_changed" ? (
             <div className="bg-amber-50 border border-amber-200 px-4 py-3 mb-4">
               <p className="text-sm font-semibold text-amber-700 mb-0.5">⚠️ 가격이 변동되었습니다</p>
               <p className="text-xs text-amber-600">
                 등록 당시 가격과 다를 수 있습니다.
-                {d.verified_price && ` 현재 확인된 가격: ${formatPrice(d.verified_price)}`}
+                {d.verified_price && ` 최근 확인 가격: ${formatPrice(d.verified_price)}`}
               </p>
             </div>
-          )}
+          ) : (d as any).last_verified_at ? (
+            <div className="flex items-center gap-1.5 mb-4">
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              <span className="text-[11px] text-emerald-600 font-medium">
+                가격 확인 완료
+              </span>
+              <span className="text-[11px] text-gray-400">
+                · {formatVerifiedTime((d as any).last_verified_at)}
+              </span>
+            </div>
+          ) : null}
 
           {/* 할인 신뢰지수 */}
           {(d as any).trust && (
