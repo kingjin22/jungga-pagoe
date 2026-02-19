@@ -69,6 +69,14 @@ async def _sync_ppomppu():
         for item in deals_data:
             sale = item.get("sale_price", 0)
             if sale < 0: continue
+            # 해외 리테일러 딜 차단: 영문 제목 → 네이버가 엉뚱한 제품 매칭 → 가격/이미지 틀림
+            OVERSEAS_RETAILERS = ["[ebay]", "[amazon]", "[woot]", "[costco]", "[asus.com]",
+                                  "[아마존재팬]", "[아마존]", "[bestbuy]", "[walmart]", "[aliexpress]",
+                                  "[미국 costco]", "[amazon.com]"]
+            title_lower = item.get("title", "").lower()
+            if any(r in title_lower for r in OVERSEAS_RETAILERS):
+                continue
+
             # 품질 기준: 이미지 있거나 실제 쇼핑몰 URL이 있어야 저장
             has_image = bool(item.get("image_url"))
             has_real_url = item["product_url"] and "ppomppu.co.kr" not in item["product_url"]

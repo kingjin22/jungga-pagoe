@@ -14,7 +14,8 @@ from typing import Optional
 
 RSS_URLS = {
     "ppomppu": "https://www.ppomppu.co.kr/rss.php?id=ppomppu",
-    "ppomppu_foreign": "https://www.ppomppu.co.kr/rss.php?id=ppomppu4",
+    # 해외 딜 비활성화: 영문 제목 → 네이버 enrichment가 엉뚱한 한국 제품 매칭 → 가격/이미지 전부 틀림
+    # "ppomppu_foreign": "https://www.ppomppu.co.kr/rss.php?id=ppomppu4",
 }
 
 INVALID_KEYWORDS = ["완료", "종료", "마감", "삭제", "광고", "공지", "이벤트"]
