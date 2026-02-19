@@ -145,6 +145,35 @@ export default function DealModal({ deal, onClose }: DealModalProps) {
             </div>
           )}
 
+          {/* 할인 신뢰지수 */}
+          {(deal as any).trust && (
+            <div className="mb-4 p-3 bg-gray-50 rounded border border-gray-100">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-base">{(deal as any).trust.emoji}</span>
+                <span className="text-sm font-bold text-gray-800">
+                  할인 신뢰지수 {(deal as any).trust.score}점
+                </span>
+                <span className={`text-xs font-semibold px-2 py-0.5 rounded ${
+                  (deal as any).trust.score >= 90 ? "bg-red-100 text-red-600" :
+                  (deal as any).trust.score >= 75 ? "bg-green-100 text-green-600" :
+                  (deal as any).trust.score >= 60 ? "bg-blue-100 text-blue-600" :
+                  "bg-gray-100 text-gray-500"
+                }`}>
+                  {(deal as any).trust.label}
+                </span>
+              </div>
+              <p className="text-xs text-gray-500 leading-relaxed">
+                {(deal as any).trust.comment}
+              </p>
+              {(deal as any).price_stats && (deal as any).price_stats.data_days >= 7 && (
+                <div className="mt-2 flex gap-3 text-xs text-gray-400">
+                  <span>📉 {(deal as any).price_stats.data_days}일 최저 {(deal as any).price_stats.min_price.toLocaleString()}원</span>
+                  <span>📊 평균 {(deal as any).price_stats.avg_price.toLocaleString()}원</span>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* 설명 */}
           {deal.description && (
             <p className="text-sm text-gray-600 leading-relaxed mb-4 border-l-2 border-gray-200 pl-3">

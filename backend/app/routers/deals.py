@@ -34,6 +34,30 @@ async def get_deal(deal_id: int):
         raise HTTPException(status_code=404, detail="딜을 찾을 수 없습니다")
     db.increment_views(deal_id)
     deal["views"] += 1
+
+    # 가격 히스토리 + 신뢰지수 (네이버 소스만)
+    if deal.get("source") == "naver":
+        try:
+            from app.services.price_history import get_price_stats, calc_trust_score
+            import re
+            sb = db.get_supabase()
+            # brand: submitter_name 또는 title의 [Brand] 태그에서 추출
+            brand = deal.get("submitter_name") or ""
+            if not brand:
+                m = re.match(r'^\[([^\]]+)\]', deal.get("title", ""))
+                brand = m.group(1) if m else ""
+            query = re.sub(r'^\[[^\]]+\]\s*', '', deal.get("title", ""))
+            stats = get_price_stats(sb, brand, query)
+            trust = calc_trust_score(
+                int(deal.get("sale_price", 0)),
+                stats,
+                int(deal.get("original_price", 0))
+            )
+            deal["price_stats"] = stats
+            deal["trust"] = trust
+        except Exception:
+            pass
+
     return deal
 
 

@@ -127,7 +127,7 @@ def increment_views(deal_id: int) -> None:
     # views + 1 (rpc 또는 read-modify-write)
     current = sb.table("deals").select("views").eq("id", deal_id).limit(1).execute()
     if current.data:
-        new_views = int(current.data.get("views", 0)) + 1
+        new_views = int(current.data[0].get("views", 0)) + 1
         sb.table("deals").update({"views": new_views}).eq("id", deal_id).execute()
 
 

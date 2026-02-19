@@ -157,6 +157,7 @@ async def _sync_brand_deals():
                 "category": item.get("category", "기타"),
                 "status": "active",
                 "is_hot": dr >= 20,
+                "submitter_name": item.get("brand", ""),  # 브랜드명 저장 (신뢰지수용)
             })
             created += 1
         logger.info(f"✅ 브랜드딜 sync: {created}개")
@@ -177,6 +178,16 @@ async def _expire_old_deals():
             logger.info(f"✅ 오래된 딜 만료: {count}개")
     except Exception as e:
         logger.error(f"❌ 딜 만료 처리 오류: {e}")
+
+
+async def _collect_price_snapshots():
+    """일일 가격 스냅샷 (브랜드딜 42종 현재가 저장)"""
+    try:
+        from app.services.price_history import collect_daily_snapshots
+        saved = await collect_daily_snapshots()
+        logger.info(f"[스냅샷] {saved}개 저장")
+    except Exception as e:
+        logger.error(f"[스냅샷] 오류: {e}")
 
 
 def start_scheduler():
@@ -221,6 +232,13 @@ def start_scheduler():
         trigger=IntervalTrigger(hours=6),
         id="expire_old_deals",
         name="오래된 딜 자동 만료 (3일 이상)",
+        replace_existing=True,
+    )
+    scheduler.add_job(
+        _collect_price_snapshots,
+        trigger=IntervalTrigger(hours=24),
+        id="price_snapshots",
+        name="일일 가격 스냅샷 (브랜드딜 42종)",
         replace_existing=True,
     )
     scheduler.start()
