@@ -35,9 +35,9 @@ export default async function HomePage({
       source: params.source,
       search: params.search,
       hot_only: params.hot_only === "true",
-    }),
-    isFiltered ? Promise.resolve([]) : getHotDeals(),
-    getCategories(),
+    }).catch(() => ({ items: [], total: 0, page: 1, size: 20, pages: 1 })),
+    isFiltered ? Promise.resolve([]) : getHotDeals().catch(() => []),
+    getCategories().catch(() => []),
   ]);
 
   return (
