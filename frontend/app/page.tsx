@@ -6,6 +6,7 @@ import SortBar from "@/components/SortBar";
 import StatsBar from "@/components/StatsBar";
 import CategoryFilter from "@/components/CategoryFilter";
 import { DealGridSkeleton } from "@/components/DealSkeleton";
+import PageViewTracker from "@/components/PageViewTracker";
 import Link from "next/link";
 
 interface SearchParams {
@@ -42,6 +43,7 @@ export default async function HomePage({
 
   return (
     <>
+      <PageViewTracker />
       {/* 통계 바 */}
       <Suspense fallback={null}>
         <StatsBar />

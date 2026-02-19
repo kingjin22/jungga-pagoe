@@ -7,17 +7,19 @@ function KPICard({
   label,
   value,
   unit = "",
+  highlight = false,
 }: {
   label: string;
   value: number | string;
   unit?: string;
+  highlight?: boolean;
 }) {
   return (
-    <div className="bg-white border border-gray-200 p-5">
-      <p className="text-xs text-gray-400 font-medium uppercase tracking-wider mb-2">
+    <div className={`p-5 border ${highlight ? "bg-gray-900 border-gray-900" : "bg-white border-gray-200"}`}>
+      <p className={`text-xs font-medium uppercase tracking-wider mb-2 ${highlight ? "text-gray-400" : "text-gray-400"}`}>
         {label}
       </p>
-      <p className="text-2xl font-black text-gray-900">
+      <p className={`text-2xl font-black ${highlight ? "text-white" : "text-gray-900"}`}>
         {typeof value === "number" ? value.toLocaleString() : value}
         {unit && <span className="text-sm font-medium text-gray-400 ml-1">{unit}</span>}
       </p>
@@ -61,8 +63,9 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* KPI */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-8">
-        <KPICard label="페이지뷰" value={metrics.today.pv} />
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
+        <KPICard label="홈 방문자" value={metrics.today.pv} unit="명" highlight />
+        <KPICard label="딜 노출" value={metrics.today.impressions ?? 0} />
         <KPICard label="딜 오픈" value={metrics.today.deal_opens} />
         <KPICard label="구매클릭" value={metrics.today.clicks} />
         <KPICard label="활성딜" value={metrics.today.active_deals} unit="개" />

@@ -285,7 +285,8 @@ def get_admin_metrics(date_str: Optional[str] = None) -> dict:
     today_events_res = sb.table("event_logs").select("event_type").gte("created_at", day_start_utc).lt("created_at", day_end_utc).execute()
     today_events = today_events_res.data or []
 
-    pv_count = sum(1 for e in today_events if e["event_type"] == "impression")
+    pv_count = sum(1 for e in today_events if e["event_type"] == "page_view")
+    impression_count = sum(1 for e in today_events if e["event_type"] == "impression")
     click_count = sum(1 for e in today_events if e["event_type"] == "outbound_click")
     deal_open_count = sum(1 for e in today_events if e["event_type"] == "deal_open")
 
@@ -304,7 +305,7 @@ def get_admin_metrics(date_str: Optional[str] = None) -> dict:
         day_ev = sb.table("event_logs").select("event_type").gte("created_at", d_start).lt("created_at", d_end).execute().data or []
         trend.append({
             "date": d_kst.strftime("%Y-%m-%d"),
-            "pv": sum(1 for e in day_ev if e["event_type"] == "impression"),
+            "pv": sum(1 for e in day_ev if e["event_type"] == "page_view"),
             "clicks": sum(1 for e in day_ev if e["event_type"] == "outbound_click"),
             "deal_opens": sum(1 for e in day_ev if e["event_type"] == "deal_open"),
         })
@@ -427,7 +428,7 @@ def get_deal_admin(deal_id: int) -> Optional[dict]:
         ev_res = sb.table("event_logs").select("event_type").eq("deal_id", deal_id).gte("created_at", day_start).execute()
         events = ev_res.data or []
         deal["stats_today"] = {
-            "impressions": sum(1 for e in events if e["event_type"] == "impression"),
+            "impressions": sum(1 for e in events if e["event_type"] == "page_view"),
             "deal_opens": sum(1 for e in events if e["event_type"] == "deal_open"),
             "clicks": sum(1 for e in events if e["event_type"] == "outbound_click"),
         }

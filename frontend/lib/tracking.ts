@@ -1,6 +1,6 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
 
-type EventType = "impression" | "deal_open" | "outbound_click";
+type EventType = "impression" | "deal_open" | "outbound_click" | "page_view";
 
 function getSessionId(): string {
   if (typeof window === "undefined") return "";
@@ -10,6 +10,14 @@ function getSessionId(): string {
     sessionStorage.setItem("_sid", sid);
   }
   return sid;
+}
+
+export async function trackPageView(): Promise<void> {
+  if (typeof window === "undefined") return;
+  // 세션당 1회만 기록
+  if (sessionStorage.getItem("_pv_tracked")) return;
+  sessionStorage.setItem("_pv_tracked", "1");
+  await trackEvent("page_view", 0);
 }
 
 export async function trackEvent(

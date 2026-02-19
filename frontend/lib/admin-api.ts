@@ -37,6 +37,7 @@ export interface AdminMetrics {
   date: string;
   today: {
     pv: number;
+    impressions?: number;
     clicks: number;
     deal_opens: number;
     active_deals: number;
