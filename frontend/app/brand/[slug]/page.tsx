@@ -72,7 +72,7 @@ export default async function BrandPage({ params }: { params: Promise<{ slug: st
     "@type": "CollectionPage",
     name: `${brand} 최저가 할인 모음`,
     description: desc,
-    url: `https://jungga-pagoe.vercel.app/brand/${params.slug}`,
+    url: `https://jungga-pagoe.vercel.app/brand/${slug}`,
   };
 
   return (

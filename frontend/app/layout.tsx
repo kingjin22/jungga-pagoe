@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import "./globals.css";
 import Header from "@/components/Header";
 import { getCategories } from "@/lib/api";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://jungga-pagoe.vercel.app"),
   title: "정가파괴 - 핫딜 최저가 모음",
   description: "Apple, Samsung, Nike, Dyson 등 브랜드 공식 정가 대비 최저가를 실시간 추적. 뽐뿌·쿠팡·네이버 핫딜을 한곳에서 확인하세요.",
   keywords: ["핫딜", "최저가", "쿠팡 핫딜", "네이버 핫딜", "할인", "특가", "세일", "애플 할인", "나이키 최저가", "다이슨 할인"],
@@ -46,7 +48,9 @@ export default async function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
         />
-        <Header categories={categoryNames} />
+        <Suspense fallback={<div className="h-14 bg-white border-b border-gray-200" />}>
+          <Header categories={categoryNames} />
+        </Suspense>
         <main>{children}</main>
         <footer className="border-t border-gray-200 mt-16">
           <div className="max-w-screen-xl mx-auto px-4 py-10">
