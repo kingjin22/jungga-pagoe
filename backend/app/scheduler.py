@@ -132,10 +132,15 @@ async def _sync_ppomppu():
                         continue
             # ──────────────────────────────────────────────────────
 
+            # 철칙 최종 가드: 할인율 0 또는 원가=판매가 → 절대 저장 금지
+            if final_dr <= 0 or (final_original or sale) <= sale:
+                skipped_no_discount += 1
+                continue
+
             db.create_deal({
                 "title": item["title"],
                 "description": item.get("description"),
-                "original_price": final_original or sale,
+                "original_price": final_original,
                 "sale_price": sale,
                 "discount_rate": final_dr,
                 "image_url": item.get("image_url"),
@@ -165,15 +170,23 @@ async def _sync_naver_cafe():
         created = skipped = 0
 
         for item in deals_data:
+            # 철칙 최종 가드: 할인율 0 또는 원가=판매가 → 절대 저장 금지
+            dr = item.get("discount_rate", 0)
+            orig = item.get("original_price", 0)
+            sale_p = item.get("sale_price", 0)
+            if dr <= 0 or orig <= sale_p:
+                skipped += 1
+                continue
+
             if db.deal_url_exists(item["product_url"]):
                 skipped += 1
                 continue
             db.create_deal({
                 "title": item["title"],
                 "description": item.get("description"),
-                "original_price": item["original_price"],
-                "sale_price": item["sale_price"],
-                "discount_rate": item["discount_rate"],
+                "original_price": orig,
+                "sale_price": sale_p,
+                "discount_rate": dr,
                 "image_url": item.get("image_url"),
                 "product_url": item["product_url"],
                 "source": "community",
