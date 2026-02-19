@@ -51,6 +51,7 @@ export async function getDeals(params?: {
   sort?: string;
   search?: string;
   hot_only?: boolean;
+  brand?: string;
 }): Promise<DealListResponse> {
   const query = new URLSearchParams();
   if (params?.page) query.set("page", String(params.page));
@@ -60,6 +61,7 @@ export async function getDeals(params?: {
   if (params?.sort) query.set("sort", params.sort);
   if (params?.search) query.set("search", params.search);
   if (params?.hot_only) query.set("hot_only", "true");
+  if (params?.brand) query.set("brand", params.brand);
 
   const res = await fetch(`${API_BASE}/api/deals?${query}`, {
     next: { revalidate: 30 },
@@ -151,5 +153,17 @@ export async function getCategories(): Promise<CategoryItem[]> {
 export async function reportDeal(id: number): Promise<{ reported: boolean; hidden: boolean }> {
   const res = await fetch(`${API_BASE}/api/deals/${id}/report`, { method: "POST" });
   if (!res.ok) throw new Error("신고 실패");
+  return res.json();
+}
+
+export interface BrandItem {
+  brand: string;
+  slug: string;
+  count: number;
+}
+
+export async function getBrandList(): Promise<BrandItem[]> {
+  const res = await fetch(`${API_BASE}/api/brands`, { next: { revalidate: 300 } });
+  if (!res.ok) return [];
   return res.json();
 }

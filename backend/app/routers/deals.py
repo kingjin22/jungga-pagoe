@@ -15,10 +15,12 @@ async def get_deals(
     sort: str = Query("latest", pattern="^(latest|popular|discount|price_asc|price_desc)$"),
     search: Optional[str] = None,
     hot_only: bool = False,
+    brand: Optional[str] = None,
 ):
     return db.get_deals(
         page=page, size=size, category=category,
         source=source, sort=sort, search=search, hot_only=hot_only,
+        brand=brand,
     )
 
 

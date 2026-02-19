@@ -50,7 +50,36 @@ export default function DealModal({ deal, onClose }: DealModalProps) {
   const saved = deal.original_price - deal.sale_price;
   const targetUrl = deal.affiliate_url || deal.product_url;
 
+  // Schema.org Product JSON-LD
+  const productJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: deal.title,
+    image: deal.image_url,
+    description: deal.description || `${deal.title} 최저가 할인`,
+    offers: {
+      "@type": "Offer",
+      price: deal.sale_price,
+      priceCurrency: "KRW",
+      availability: "https://schema.org/InStock",
+      url: targetUrl,
+      priceValidUntil: new Date(Date.now() + 86400000 * 3).toISOString().split("T")[0],
+      ...(deal.original_price > deal.sale_price && {
+        priceSpecification: {
+          "@type": "PriceSpecification",
+          price: deal.original_price,
+          priceCurrency: "KRW",
+        },
+      }),
+    },
+  };
+
   return (
+    <>
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
+    />
     <div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
       onClick={onClose}
@@ -220,5 +249,6 @@ export default function DealModal({ deal, onClose }: DealModalProps) {
         </div>
       </div>
     </div>
+    </>
   );
 }

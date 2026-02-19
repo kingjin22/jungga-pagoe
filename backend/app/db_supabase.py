@@ -56,6 +56,7 @@ def get_deals(
     sort: str = "latest",
     search: str = None,
     hot_only: bool = False,
+    brand: str = None,
 ) -> dict:
     sb = get_supabase()
     query = sb.table("deals").select("*", count="exact")
@@ -71,6 +72,9 @@ def get_deals(
         query = query.eq("is_hot", True)
     if search:
         query = query.ilike("title", f"%{search}%")
+    if brand:
+        # submitter_name 또는 title의 [Brand] 태그로 필터
+        query = query.or_(f"submitter_name.ilike.%{brand}%,title.ilike.%[{brand}]%")
 
     # 정렬
     sort_map = {

@@ -4,13 +4,17 @@ import Header from "@/components/Header";
 import { getCategories } from "@/lib/api";
 
 export const metadata: Metadata = {
-  title: "정가파괴 - 쿠팡/네이버 핫딜 모음",
-  description: "쿠팡, 네이버 핫딜을 자동 수집하고 커뮤니티가 제보하는 진짜 할인 정보",
-  keywords: ["핫딜", "쿠팡", "네이버", "할인", "특가", "세일"],
+  title: "정가파괴 - 핫딜 최저가 모음",
+  description: "Apple, Samsung, Nike, Dyson 등 브랜드 공식 정가 대비 최저가를 실시간 추적. 뽐뿌·쿠팡·네이버 핫딜을 한곳에서 확인하세요.",
+  keywords: ["핫딜", "최저가", "쿠팡 핫딜", "네이버 핫딜", "할인", "특가", "세일", "애플 할인", "나이키 최저가", "다이슨 할인"],
   openGraph: {
-    title: "정가파괴",
-    description: "진짜 핫딜만 모인 곳",
+    title: "정가파괴 - 핫딜 최저가 모음",
+    description: "브랜드 공식 정가 대비 진짜 할인만 모은 핫딜 플랫폼",
     type: "website",
+    locale: "ko_KR",
+  },
+  alternates: {
+    canonical: "https://jungga-pagoe.vercel.app",
   },
 };
 
@@ -22,9 +26,26 @@ export default async function RootLayout({
   const categories = await getCategories().catch(() => []);
   const categoryNames = categories.map((c) => c.category);
 
+  const orgJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: "정가파괴",
+    url: "https://jungga-pagoe.vercel.app",
+    description: "브랜드 공식 정가 대비 진짜 할인만 모은 핫딜 플랫폼",
+    potentialAction: {
+      "@type": "SearchAction",
+      target: "https://jungga-pagoe.vercel.app/?search={search_term_string}",
+      "query-input": "required name=search_term_string",
+    },
+  };
+
   return (
     <html lang="ko">
       <body className="min-h-screen bg-white">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
+        />
         <Header categories={categoryNames} />
         <main>{children}</main>
         <footer className="border-t border-gray-200 mt-16">
