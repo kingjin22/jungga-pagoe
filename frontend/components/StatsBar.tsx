@@ -15,7 +15,7 @@ function lastUpdatedText(): string {
   const mins = now.getMinutes();
   const elapsed = mins % 30;
   if (elapsed === 0) return "방금 업데이트";
-  if (elapsed < 5) return "5분 내 업데이트";
+  if (elapsed === 1) return "1분 전 업데이트";
   return `${elapsed}분 전 업데이트`;
 }
 
