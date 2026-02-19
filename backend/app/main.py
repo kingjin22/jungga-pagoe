@@ -1,10 +1,14 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+from pydantic import BaseModel
+from typing import Optional
 
 from app.config import settings
 from app.routers import deals, stats, verify
+from app.routers import admin as admin_router
 from app.scheduler import start_scheduler, stop_scheduler
+import app.db_supabase as db
 
 
 @asynccontextmanager
@@ -32,6 +36,31 @@ app.add_middleware(
 app.include_router(deals.router)
 app.include_router(stats.router)
 app.include_router(verify.router)
+app.include_router(admin_router.router)
+
+
+# ──────────────────────────────────────────
+# 이벤트 수신 엔드포인트
+# ──────────────────────────────────────────
+
+class EventPayload(BaseModel):
+    event_type: str  # impression | deal_open | outbound_click
+    deal_id: Optional[int] = None
+    session_id: Optional[str] = None
+    referrer: Optional[str] = None
+
+
+@app.post("/api/events")
+async def track_event(payload: EventPayload, request: Request):
+    user_agent = request.headers.get("user-agent")
+    db.log_event(
+        event_type=payload.event_type,
+        deal_id=payload.deal_id,
+        session_id=payload.session_id,
+        referrer=payload.referrer,
+        user_agent=user_agent,
+    )
+    return {"ok": True}
 
 
 @app.get("/")

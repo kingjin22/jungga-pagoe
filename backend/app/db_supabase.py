@@ -5,7 +5,8 @@ SQLAlchemy 직접 연결 대신 supabase-py 사용 (포트 5432 우회)
 from supabase import create_client, Client
 from app.config import settings
 import math
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+from typing import Optional, Dict, Any
 
 _client = None
 
@@ -233,3 +234,204 @@ def get_stats() -> dict:
         "expired": expired,
         "price_changed": price_changed,
     }
+
+
+# ───────────────────────────────────────────
+# Admin 전용 함수
+# ───────────────────────────────────────────
+
+def log_event(
+    event_type: str,
+    deal_id: Optional[int] = None,
+    session_id: Optional[str] = None,
+    referrer: Optional[str] = None,
+    user_agent: Optional[str] = None,
+) -> None:
+    """event_logs 테이블에 이벤트 INSERT"""
+    sb = get_supabase()
+    try:
+        sb.table("event_logs").insert({
+            "event_type": event_type,
+            "deal_id": deal_id,
+            "session_id": session_id,
+            "referrer": referrer,
+            "user_agent": user_agent,
+        }).execute()
+    except Exception:
+        pass  # 이벤트 로깅 실패는 무시
+
+
+def get_admin_metrics(date_str: Optional[str] = None) -> dict:
+    """당일 집계 + 최근 7일 추이 + Top10 딜"""
+    sb = get_supabase()
+    KST = timezone(timedelta(hours=9))
+    now_kst = datetime.now(KST)
+
+    if date_str:
+        try:
+            target_date = datetime.strptime(date_str, "%Y-%m-%d").replace(tzinfo=KST)
+        except ValueError:
+            target_date = now_kst
+    else:
+        target_date = now_kst
+
+    # 당일 범위 (KST → UTC)
+    day_start_kst = target_date.replace(hour=0, minute=0, second=0, microsecond=0)
+    day_end_kst = day_start_kst + timedelta(days=1)
+    day_start_utc = day_start_kst.astimezone(timezone.utc).isoformat()
+    day_end_utc = day_end_kst.astimezone(timezone.utc).isoformat()
+
+    # 오늘 이벤트
+    today_events_res = sb.table("event_logs").select("event_type").gte("created_at", day_start_utc).lt("created_at", day_end_utc).execute()
+    today_events = today_events_res.data or []
+
+    pv_count = sum(1 for e in today_events if e["event_type"] == "impression")
+    click_count = sum(1 for e in today_events if e["event_type"] == "outbound_click")
+    deal_open_count = sum(1 for e in today_events if e["event_type"] == "deal_open")
+
+    # 활성 딜 수
+    active_count = sb.table("deals").select("id", count="exact").in_("status", ["active", "price_changed"]).execute().count or 0
+
+    # 오늘 신규 딜 수
+    new_deals_count = sb.table("deals").select("id", count="exact").gte("created_at", day_start_utc).lt("created_at", day_end_utc).execute().count or 0
+
+    # 최근 7일 추이
+    trend = []
+    for i in range(6, -1, -1):
+        d_kst = now_kst - timedelta(days=i)
+        d_start = d_kst.replace(hour=0, minute=0, second=0, microsecond=0).astimezone(timezone.utc).isoformat()
+        d_end = (d_kst.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)).astimezone(timezone.utc).isoformat()
+        day_ev = sb.table("event_logs").select("event_type").gte("created_at", d_start).lt("created_at", d_end).execute().data or []
+        trend.append({
+            "date": d_kst.strftime("%Y-%m-%d"),
+            "pv": sum(1 for e in day_ev if e["event_type"] == "impression"),
+            "clicks": sum(1 for e in day_ev if e["event_type"] == "outbound_click"),
+            "deal_opens": sum(1 for e in day_ev if e["event_type"] == "deal_open"),
+        })
+
+    # Top 10 딜 (오늘 클릭 기준)
+    top10_res = sb.table("event_logs").select("deal_id").eq("event_type", "outbound_click").gte("created_at", day_start_utc).lt("created_at", day_end_utc).execute().data or []
+    from collections import Counter
+    click_counter = Counter(e["deal_id"] for e in top10_res if e.get("deal_id"))
+    top10_ids = [did for did, _ in click_counter.most_common(10)]
+
+    top10_deals = []
+    if top10_ids:
+        deals_res = sb.table("deals").select("id,title,sale_price,discount_rate,source,upvotes").in_("id", top10_ids).execute().data or []
+        deal_map = {d["id"]: d for d in deals_res}
+        for did in top10_ids:
+            if did in deal_map:
+                d = deal_map[did]
+                top10_deals.append({
+                    "id": d["id"],
+                    "title": d.get("title", ""),
+                    "sale_price": float(d.get("sale_price", 0)),
+                    "discount_rate": float(d.get("discount_rate", 0)),
+                    "source": d.get("source", ""),
+                    "upvotes": int(d.get("upvotes", 0)),
+                    "clicks_today": click_counter[did],
+                })
+
+    return {
+        "date": target_date.strftime("%Y-%m-%d"),
+        "today": {
+            "pv": pv_count,
+            "clicks": click_count,
+            "deal_opens": deal_open_count,
+            "active_deals": active_count,
+            "new_deals": new_deals_count,
+        },
+        "trend": trend,
+        "top10": top10_deals,
+    }
+
+
+def get_admin_deals(
+    status: Optional[str] = None,
+    source: Optional[str] = None,
+    search: Optional[str] = None,
+    pinned: Optional[bool] = None,
+    sort: str = "latest",
+    page: int = 1,
+    size: int = 30,
+) -> dict:
+    """관리자용 딜 목록 (모든 status 포함)"""
+    sb = get_supabase()
+    query = sb.table("deals").select("*", count="exact")
+
+    if status:
+        query = query.eq("status", status)
+    if source:
+        query = query.eq("source", source)
+    if search:
+        query = query.ilike("title", f"%{search}%")
+    if pinned is not None:
+        query = query.eq("pinned", pinned)
+
+    sort_map = {
+        "latest": ("created_at", False),
+        "popular": ("upvotes", False),
+        "discount": ("discount_rate", False),
+        "views": ("views", False),
+        "pinned": ("pinned", False),
+    }
+    col, asc = sort_map.get(sort, ("created_at", False))
+    query = query.order(col, desc=not asc)
+
+    offset = (page - 1) * size
+    query = query.range(offset, offset + size - 1)
+
+    res = query.execute()
+    total = res.count or 0
+    items = res.data or []
+
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "size": size,
+        "pages": math.ceil(total / size) if total > 0 else 1,
+    }
+
+
+def update_deal_admin(deal_id: int, data: Dict[str, Any]) -> Optional[dict]:
+    """관리자 필드 업데이트 (status, pinned, admin_note, expires_at 등)"""
+    sb = get_supabase()
+    allowed = {"status", "pinned", "admin_note", "expires_at", "is_hot", "title"}
+    patch = {k: v for k, v in data.items() if k in allowed and v is not None}
+    if not patch:
+        return None
+    res = sb.table("deals").update(patch).eq("id", deal_id).execute()
+    return res.data[0] if res.data else None
+
+
+def get_deal_admin(deal_id: int) -> Optional[dict]:
+    """관리자용 딜 상세 (price_history 포함)"""
+    sb = get_supabase()
+    deal_res = sb.table("deals").select("*").eq("id", deal_id).limit(1).execute()
+    if not deal_res.data:
+        return None
+    deal = deal_res.data[0]
+
+    # 가격 히스토리
+    try:
+        ph_res = sb.table("price_history").select("*").eq("deal_id", deal_id).order("checked_at", desc=True).limit(30).execute()
+        deal["price_history"] = ph_res.data or []
+    except Exception:
+        deal["price_history"] = []
+
+    # 집계 (event_logs)
+    try:
+        KST = timezone(timedelta(hours=9))
+        day_start = datetime.now(KST).replace(hour=0, minute=0, second=0, microsecond=0).astimezone(timezone.utc).isoformat()
+        ev_res = sb.table("event_logs").select("event_type").eq("deal_id", deal_id).gte("created_at", day_start).execute()
+        events = ev_res.data or []
+        deal["stats_today"] = {
+            "impressions": sum(1 for e in events if e["event_type"] == "impression"),
+            "deal_opens": sum(1 for e in events if e["event_type"] == "deal_open"),
+            "clicks": sum(1 for e in events if e["event_type"] == "outbound_click"),
+        }
+    except Exception:
+        deal["stats_today"] = {"impressions": 0, "deal_opens": 0, "clicks": 0}
+
+    return deal

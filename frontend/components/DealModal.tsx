@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Deal, formatPrice, reportDeal, getDeal } from "@/lib/api";
+import { trackEvent } from "@/lib/tracking";
 
 const SOURCE_LABEL: Record<string, string> = {
   coupang: "쿠팡",
@@ -19,10 +20,11 @@ export default function DealModal({ deal, onClose }: DealModalProps) {
   const [reporting, setReporting] = useState(false);
   const [freshDeal, setFreshDeal] = useState<Deal | null>(null);
 
-  // 모달 열릴 때 API 호출 → 조회수 증가 + 최신 데이터
+  // 모달 열릴 때 API 호출 → 조회수 증가 + 최신 데이터 + 트래킹
   useEffect(() => {
     if (!deal) { setFreshDeal(null); return; }
     setFreshDeal(deal); // 먼저 기존 데이터로 표시
+    trackEvent("deal_open", deal.id);
     getDeal(deal.id).then(d => { if (d) setFreshDeal(d); }).catch(() => {});
   }, [deal?.id]);
 
@@ -254,6 +256,7 @@ export default function DealModal({ deal, onClose }: DealModalProps) {
             href={targetUrl}
             target="_blank"
             rel="noopener noreferrer sponsored"
+            onClick={() => trackEvent("outbound_click", d.id)}
             className="block w-full text-center bg-[#111] text-white font-bold py-3.5 text-sm hover:bg-[#333] transition-colors"
           >
             {d.sale_price === 0 ? "지금 무료로 받기" : "지금 최저가 구매"}

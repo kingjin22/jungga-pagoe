@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Deal, formatPrice, upvoteDeal } from "@/lib/api";
+import { trackEvent } from "@/lib/tracking";
 
 interface DealCardProps {
   deal: Deal;
@@ -59,6 +60,24 @@ function extractRetailer(title: string, submitterName?: string): string {
 export default function DealCard({ deal, onClick }: DealCardProps) {
   const [upvotes, setUpvotes] = useState(deal.upvotes);
   const [voted, setVoted] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const impressedRef = useRef(false);
+
+  // 카드 노출 트래킹 (IntersectionObserver)
+  useEffect(() => {
+    if (!cardRef.current) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !impressedRef.current) {
+          impressedRef.current = true;
+          trackEvent("impression", deal.id);
+        }
+      },
+      { threshold: 0.5 }
+    );
+    observer.observe(cardRef.current);
+    return () => observer.disconnect();
+  }, [deal.id]);
 
   const saved = deal.original_price - deal.sale_price;
   const targetUrl = deal.affiliate_url || deal.product_url;
@@ -77,8 +96,13 @@ export default function DealCard({ deal, onClick }: DealCardProps) {
     } catch {}
   };
 
+  const handleCardClick = () => {
+    trackEvent("deal_open", deal.id);
+    onClick?.(deal);
+  };
+
   return (
-    <div className="deal-card group" onClick={() => onClick?.(deal)}>
+    <div ref={cardRef} className="deal-card group" onClick={handleCardClick}>
       {/* 이미지 영역 */}
       <div className="relative overflow-hidden bg-gray-100 aspect-square">
         {deal.image_url ? (
@@ -214,7 +238,7 @@ export default function DealCard({ deal, onClick }: DealCardProps) {
           href={targetUrl}
           target="_blank"
           rel="noopener noreferrer sponsored"
-          onClick={(e) => e.stopPropagation()}
+          onClick={(e) => { e.stopPropagation(); trackEvent("outbound_click", deal.id); }}
           className="block mt-2 text-center border border-gray-200 text-[12px] font-semibold py-2 text-gray-700 hover:border-gray-900 hover:text-black transition-colors"
         >
           {isFree ? "받으러 가기" : "지금 최저가 구매"}

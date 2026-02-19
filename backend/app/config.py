@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     NAVER_CLIENT_ID: str = ""
     NAVER_CLIENT_SECRET: str = ""
 
+    # Admin
+    ADMIN_SECRET: str = "changeme"
+
     class Config:
         env_file = ".env"
 
