@@ -155,6 +155,41 @@ async def _sync_ppomppu():
         logger.error(f"❌ 뽐뿌 sync: {e}")
 
 
+async def _sync_naver_cafe():
+    """정가거부 카페 핫딜 게시판 수집 → Naver Shopping 시세 검증 → DB 저장"""
+    try:
+        import app.db_supabase as db
+        from app.services.naver_cafe import fetch_naver_cafe_deals
+
+        deals_data = await fetch_naver_cafe_deals()
+        created = skipped = 0
+
+        for item in deals_data:
+            if db.deal_url_exists(item["product_url"]):
+                skipped += 1
+                continue
+            db.create_deal({
+                "title": item["title"],
+                "description": item.get("description"),
+                "original_price": item["original_price"],
+                "sale_price": item["sale_price"],
+                "discount_rate": item["discount_rate"],
+                "image_url": item.get("image_url"),
+                "product_url": item["product_url"],
+                "source": "community",
+                "category": item.get("category", "기타"),
+                "status": "active",
+                "is_hot": item.get("is_hot", False),
+                "submitter_name": item.get("submitter_name", "정가거부"),
+                "admin_note": "정가거부 카페 + 네이버 시세 검증",
+            })
+            created += 1
+
+        logger.info(f"✅ 정가거부 카페: {created}개 신규 | {skipped}개 중복 스킵")
+    except Exception as e:
+        logger.error(f"❌ 정가거부 카페 sync: {e}")
+
+
 async def _verify_prices():
     logger.info("🔍 가격 검증 시작...")
     try:
@@ -267,6 +302,13 @@ def start_scheduler():
         trigger=IntervalTrigger(minutes=30),
         id="sync_ppomppu",
         name="뽐뿌 핫딜 자동 동기화",
+        replace_existing=True,
+    )
+    scheduler.add_job(
+        _sync_naver_cafe,
+        trigger=IntervalTrigger(minutes=30),
+        id="sync_naver_cafe",
+        name="정가거부 카페 핫딜 수집 (30분)",
         replace_existing=True,
     )
     scheduler.add_job(

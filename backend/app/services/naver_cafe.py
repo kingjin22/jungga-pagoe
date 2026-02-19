@@ -29,7 +29,7 @@ PRICE_WAN_PATTERN = re.compile(r'(\d+(?:\.\d+)?)\s*만\s*원')
 SOURCE_PATTERN = re.compile(r'^\[?([^\]]{2,10})\]?\s*')
 
 
-def parse_price_from_title(title: str) -> int | None:
+def parse_price_from_title(title: str) -> "int | None":
     """제목에서 가격 추출"""
     # 만원 단위
     m = PRICE_WAN_PATTERN.search(title)
@@ -81,7 +81,7 @@ async def fetch_cafe_articles(page: int = 1, per_page: int = 20) -> list[dict]:
         return data["message"]["result"]["articleList"]
 
 
-async def fetch_naver_shopping(query: str, client: httpx.AsyncClient) -> dict | None:
+async def fetch_naver_shopping(query: str, client: httpx.AsyncClient) -> "dict | None":
     """Naver Shopping API로 제품 검색"""
     from app.config import settings
     try:
