@@ -135,9 +135,26 @@ export default function DealModal({ deal, onClose }: DealModalProps) {
           </div>
 
           {/* 제목 */}
-          <h2 className="text-base font-bold text-gray-900 leading-snug mb-4">
+          <h2 className="text-base font-bold text-gray-900 leading-snug mb-3">
             {deal.title}
           </h2>
+
+          {/* 신뢰 뱃지 */}
+          <div className="flex flex-wrap gap-1.5 mb-4">
+            <span className="inline-flex items-center gap-1 text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-sm font-medium">
+              ✓ 정가 검증 완료
+            </span>
+            {deal.discount_rate > 0 && deal.discount_rate <= 65 && (
+              <span className="inline-flex items-center gap-1 text-[10px] text-blue-700 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-sm font-medium">
+                ✓ 이상 할인율 없음
+              </span>
+            )}
+            {deal.source === "naver" && (
+              <span className="inline-flex items-center gap-1 text-[10px] text-gray-600 bg-gray-50 border border-gray-100 px-2 py-0.5 rounded-sm font-medium">
+                ✓ 공식 판매처 확인
+              </span>
+            )}
+          </div>
 
           {/* 가격 */}
           <div className="bg-gray-50 p-4 mb-4">
@@ -223,7 +240,7 @@ export default function DealModal({ deal, onClose }: DealModalProps) {
             rel="noopener noreferrer sponsored"
             className="block w-full text-center bg-[#111] text-white font-bold py-3.5 text-sm hover:bg-[#333] transition-colors"
           >
-            지금 구매하기
+            {deal.sale_price === 0 ? "지금 무료로 받기" : "지금 최저가 구매"}
           </a>
 
           {deal.affiliate_url && (

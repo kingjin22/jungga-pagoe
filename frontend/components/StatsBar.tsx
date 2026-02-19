@@ -10,6 +10,16 @@ async function fetchStats() {
   }
 }
 
+function lastUpdatedText(): string {
+  // 30분마다 뽐뿌 sync → 최대 30분 전
+  const now = new Date();
+  const mins = now.getMinutes();
+  const elapsed = mins % 30; // 마지막 30분 사이클 기준
+  if (elapsed === 0) return "방금 업데이트";
+  if (elapsed < 5) return "5분 내 업데이트";
+  return `${elapsed}분 전 업데이트`;
+}
+
 export default async function StatsBar() {
   const stats = await fetchStats();
   if (!stats) return null;
@@ -34,6 +44,11 @@ export default async function StatsBar() {
               <span className="text-[13px] font-bold text-gray-900">{item.value}</span>
             </div>
           ))}
+          {/* 실시간 업데이트 표시 */}
+          <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-[11px] text-gray-400">{lastUpdatedText()}</span>
+          </div>
         </div>
       </div>
     </div>

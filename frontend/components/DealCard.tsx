@@ -170,8 +170,8 @@ export default function DealCard({ deal, onClick }: DealCardProps) {
             현재가 {formatPrice(deal.verified_price)}
           </p>
         ) : saved > 100 ? (
-          <p className="text-[11px] text-gray-400 mt-0.5">
-            {formatPrice(saved)} 절약
+          <p className="text-[11px] text-emerald-600 font-semibold mt-0.5">
+            {formatPrice(saved)} 절약 ↓
           </p>
         ) : null}
 
@@ -203,7 +203,7 @@ export default function DealCard({ deal, onClick }: DealCardProps) {
           onClick={(e) => e.stopPropagation()}
           className="block mt-2 text-center border border-gray-200 text-[12px] font-semibold py-2 text-gray-700 hover:border-gray-900 hover:text-black transition-colors"
         >
-          {isFree ? "받으러 가기" : "구매하기"}
+          {isFree ? "받으러 가기" : "지금 최저가 구매"}
         </a>
       </div>
     </div>
