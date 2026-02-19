@@ -56,11 +56,8 @@ async def _sync_naver():
 
 
 async def _sync_ppomppu():
-    # 가격 신뢰성 문제로 임시 비활성화
-    # 커뮤니티 딜은 수집 당시 가격과 실제 판매가 불일치 → 신뢰성 훼손
-    # TODO: 실시간 가격 크롤링 구현 후 재활성화
-    logger.info("⏸ 뽐뿌 sync 비활성화 (가격 신뢰성 개선 작업 중)")
-    return
+    # product_url = 네이버 카탈로그 URL 우선 → 클릭 시 실시간 최저가
+    # original_price = 네이버 hprice(정가) 기준 → 정확한 할인율
     try:
         import app.db_supabase as db
         from app.services.ppomppu import fetch_ppomppu_deals
@@ -104,20 +101,33 @@ async def _sync_ppomppu():
                 for w in v.warnings:
                     logger.info(f"  ⚠️ {w}")
 
+            # product_url = 네이버 카탈로그 URL 우선 (실시간 최저가 표시)
+            # 없으면 원본 쇼핑몰 URL 사용
+            naver_catalog_url = naver_data.get("product_url") if naver_data else None
+            final_url = naver_catalog_url or item["product_url"]
+            if not final_url:
+                skipped += 1
+                continue
+
+            # 중복 체크는 최종 URL 기준
+            if db.deal_url_exists(final_url):
+                skipped += 1
+                continue
+
             db.create_deal({
                 "title": item["title"],
                 "description": item.get("description"),
                 "original_price": v.original_price,
                 "sale_price": v.sale_price,
                 "discount_rate": v.discount_rate,
-                "image_url": item.get("image_url"),
-                "product_url": item["product_url"],
+                "image_url": item.get("image_url") or (naver_data.get("image_url") if naver_data else None),
+                "product_url": final_url,
                 "source": "community",
                 "category": item.get("category", "기타"),
                 "status": "active",
                 "is_hot": v.is_hot,
                 "submitter_name": item.get("submitter_name", "뽐뿌"),
-                "admin_note": "네이버 시세 검증 완료" if v.naver_verified else None,
+                "admin_note": "네이버 카탈로그 + 시세 검증" if naver_catalog_url else "뽐뿌 직링크",
             })
             created += 1
 
@@ -127,9 +137,8 @@ async def _sync_ppomppu():
 
 
 async def _sync_naver_cafe():
-    # 가격 신뢰성 문제로 임시 비활성화 (카페 URL → 실제 쇼핑몰 가격 검증 불가)
-    logger.info("⏸ 정가거부 카페 sync 비활성화")
-    return
+    # product_url = 네이버 카탈로그 URL (카페 URL ❌) → 실시간 가격 검증 가능
+    # original_price = 네이버 hprice(정가) 기준 → 정확한 할인율
     try:
         import app.db_supabase as db
         from app.services.naver_cafe import fetch_naver_cafe_deals

@@ -99,12 +99,20 @@ async def fetch_naver_shopping(query: str, client: httpx.AsyncClient) -> "dict |
         items = r.json().get("items", [])
         if not items:
             return None
-        # 첫 번째 결과 반환
-        item = items[0]
+        # 카탈로그 항목 우선 (productType=1) → 실시간 최저가 페이지
+        catalog = next((i for i in items if str(i.get("productType")) == "1"), None)
+        item = catalog or items[0]
+        product_id = item.get("productId")
+        # 카탈로그 URL: 클릭 시 실시간 최저가 표시
+        if product_id and str(item.get("productType")) == "1":
+            catalog_url = f"https://search.shopping.naver.com/catalog/{product_id}"
+        else:
+            catalog_url = item.get("link")
         return {
             "naver_title": re.sub('<[^>]+>', '', item.get("title", "")),
             "image_url": item.get("image"),
-            "product_url": item.get("link"),
+            "product_url": catalog_url,          # 카탈로그 URL 우선
+            "naver_product_id": str(product_id) if product_id else None,
             "lprice": int(item.get("lprice", 0)),
             "hprice": int(item.get("hprice") or 0),
         }
@@ -149,21 +157,24 @@ async def fetch_naver_cafe_deals() -> list[dict]:
                 continue
 
             lprice = naver["lprice"]
+            hprice = naver["hprice"]  # 네이버 정가(최고가)
             if lprice <= 0:
                 continue
 
-            # 커뮤니티 제시 가격 vs 네이버 최저가 비교
+            # 정가 기준: hprice(정가) > lprice 이면 hprice 사용, 없으면 lprice
+            naver_ref = hprice if (hprice and hprice > lprice) else lprice
+
             if sale_price and sale_price > 0:
                 # 가품 방지: 커뮤니티 가격이 네이버 최저가의 15% 미만이면 스킵
                 if sale_price < lprice * 0.15:
                     continue
-                # 할인율 계산 (네이버 lprice 기준)
-                if sale_price < lprice:
-                    discount_rate = round((1 - sale_price / lprice) * 100, 1)
-                    original_price = lprice
+                # 정가 기준 할인율 계산 (핵심: lprice가 아닌 naver_ref(정가) 기준)
+                if sale_price < naver_ref:
+                    discount_rate = round((1 - sale_price / naver_ref) * 100, 1)
+                    original_price = naver_ref   # 네이버 정가를 원가로
                     final_sale = sale_price
                 else:
-                    # 커뮤니티 가격이 네이버보다 비쌈 → 스킵
+                    # 커뮤니티 가격이 네이버 정가보다 비쌈 → 딜 아님
                     continue
             else:
                 # 가격 정보 없으면 스킵
@@ -173,20 +184,23 @@ async def fetch_naver_cafe_deals() -> list[dict]:
             if discount_rate < 10:
                 continue
 
-            # 카페 원문 링크
-            article_url = f"https://cafe.naver.com/f-e/cafes/{CAFE_ID}/articles/{art.get('articleId')}"
+            # product_url = 네이버 카탈로그 URL (실시간 최저가) - 카페 URL 절대 사용 금지
+            naver_product_url = naver.get("product_url")  # 이미 카탈로그 URL로 수정됨
+            if not naver_product_url:
+                continue  # 네이버 URL 없으면 스킵
 
             source_tag = parse_source_from_title(title)
             category = infer_category(title + " " + query)
 
             deals.append({
                 "title": title[:200],
-                "description": f"정가거부 카페 핫딜 | 네이버 최저가 {lprice:,}원 대비 {discount_rate}% 할인",
+                "description": f"정가거부 카페 제보 | 네이버 정가 {naver_ref:,}원 대비 {discount_rate}% 할인",
                 "original_price": original_price,
                 "sale_price": final_sale,
                 "discount_rate": discount_rate,
                 "image_url": naver.get("image_url"),
-                "product_url": article_url,   # 카페 원문 링크
+                "product_url": naver_product_url,   # ✅ 네이버 카탈로그 URL
+                "naver_product_id": naver.get("naver_product_id"),
                 "source": "community",
                 "category": category,
                 "is_hot": discount_rate >= 20,
