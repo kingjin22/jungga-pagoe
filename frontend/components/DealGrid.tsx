@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Deal } from "@/lib/api";
 import DealCard from "./DealCard";
 import DealModal from "./DealModal";
@@ -11,6 +11,7 @@ interface DealGridProps {
 
 export default function DealGrid({ deals }: DealGridProps) {
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
+  const handleClose = useCallback(() => setSelectedDeal(null), []);
 
   return (
     <>
@@ -26,7 +27,7 @@ export default function DealGrid({ deals }: DealGridProps) {
 
       <DealModal
         deal={selectedDeal}
-        onClose={() => setSelectedDeal(null)}
+        onClose={handleClose}
       />
     </>
   );

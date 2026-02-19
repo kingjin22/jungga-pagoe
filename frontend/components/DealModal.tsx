@@ -44,16 +44,20 @@ export default function DealModal({ deal, onClose }: DealModalProps) {
   }, [deal?.id]);
 
   useEffect(() => {
+    if (!deal) {
+      document.body.style.overflow = "";
+      return;
+    }
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
     document.addEventListener("keydown", handler);
-    document.body.style.overflow = deal ? "hidden" : "";
+    document.body.style.overflow = "hidden";
     return () => {
       document.removeEventListener("keydown", handler);
       document.body.style.overflow = "";
     };
-  }, [deal, onClose]);
+  }, [deal?.id, onClose]);
 
   const d = freshDeal ?? deal;
   if (!d) return null;
@@ -88,10 +92,6 @@ export default function DealModal({ deal, onClose }: DealModalProps) {
 
   return (
     <>
-    <script
-      type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
-    />
     <div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
       onClick={onClose}
