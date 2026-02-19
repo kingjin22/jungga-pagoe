@@ -17,12 +17,12 @@ export async function trackPageView(): Promise<void> {
   // 세션당 1회만 기록
   if (sessionStorage.getItem("_pv_tracked")) return;
   sessionStorage.setItem("_pv_tracked", "1");
-  await trackEvent("page_view", 0);
+  await trackEvent("page_view", null);
 }
 
 export async function trackEvent(
   type: EventType,
-  dealId: number
+  dealId: number | null
 ): Promise<void> {
   if (typeof window === "undefined") return;
   try {
@@ -33,11 +33,10 @@ export async function trackEvent(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         event_type: type,
-        deal_id: dealId,
+        deal_id: dealId || null,  // 0이나 null 모두 null로
         session_id: getSessionId(),
         referrer: referrer || null,
       }),
-      // fire-and-forget: don't block UI
       keepalive: true,
     });
   } catch {
