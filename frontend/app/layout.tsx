@@ -72,7 +72,7 @@ export default async function RootLayout({
               </div>
             </div>
             <div className="mt-8 pt-6 border-t border-gray-100 text-xs text-gray-300">
-              © 2025 정가파괴. All rights reserved.
+              © 2026 정가파괴. All rights reserved.
             </div>
           </div>
         </footer>
