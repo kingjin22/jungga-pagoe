@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import Script from "next/script";
 import "./globals.css";
 import Header from "@/components/Header";
 import { getCategories } from "@/lib/api";
@@ -44,14 +43,16 @@ export default async function RootLayout({
 
   return (
     <html lang="ko">
-      <body className="min-h-screen bg-white">
-        {/* Google AdSense */}
-        <Script
+      <head>
+        {/* Google AdSense - 정적 HTML에 삽입해 Google 크롤러 검증 통과 */}
+        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
+        <script
           async
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1679118656531907"
           crossOrigin="anonymous"
-          strategy="afterInteractive"
         />
+      </head>
+      <body className="min-h-screen bg-white">
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
