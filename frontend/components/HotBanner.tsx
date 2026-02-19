@@ -1,5 +1,7 @@
+"use client";
 import { Deal, formatPrice } from "@/lib/api";
 import Link from "next/link";
+import { trackEvent } from "@/lib/tracking";
 
 interface HotBannerProps {
   deals: Deal[];
@@ -41,6 +43,10 @@ export default function HotBanner({ deals }: HotBannerProps) {
                 target="_blank"
                 rel="noopener noreferrer sponsored"
                 className="group shrink-0 w-[180px]"
+                onClick={() => {
+                  trackEvent("deal_open", deal.id);
+                  trackEvent("outbound_click", deal.id);
+                }}
               >
                 {/* 이미지 */}
                 <div className="relative overflow-hidden bg-gray-100 aspect-square mb-2">

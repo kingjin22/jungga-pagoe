@@ -11,10 +11,9 @@ async function fetchStats() {
 }
 
 function lastUpdatedText(): string {
-  // 30분마다 뽐뿌 sync → 최대 30분 전
   const now = new Date();
   const mins = now.getMinutes();
-  const elapsed = mins % 30; // 마지막 30분 사이클 기준
+  const elapsed = mins % 30;
   if (elapsed === 0) return "방금 업데이트";
   if (elapsed < 5) return "5분 내 업데이트";
   return `${elapsed}분 전 업데이트`;
@@ -25,8 +24,9 @@ export default async function StatsBar() {
   if (!stats) return null;
 
   const avgDiscount = stats.avg_discount > 0 ? `${stats.avg_discount}%` : "-";
+
+  // 방문자 수는 공개 노출 안 함 (admin 전용)
   const items = [
-    ...(stats.today_visitors > 0 ? [{ label: "오늘 방문자", value: `${stats.today_visitors.toLocaleString()}명`, highlight: true }] : []),
     { label: "전체 딜", value: `${stats.total_deals.toLocaleString()}개` },
     { label: "HOT 딜", value: `${stats.hot_deals.toLocaleString()}개` },
     { label: "평균 할인율", value: avgDiscount },
@@ -37,19 +37,20 @@ export default async function StatsBar() {
 
   return (
     <div className="bg-[#FAFAFA] border-b border-gray-200">
-      <div className="max-w-screen-xl mx-auto px-4 py-3">
-        <div className="flex items-center gap-8 overflow-x-auto scrollbar-hide">
-          {items.map((item) => (
-            <div key={item.label} className="flex items-center gap-2 shrink-0">
-              <span className="text-[11px] text-gray-400">{item.label}</span>
-              <span className={`text-[13px] font-bold ${'highlight' in item && item.highlight ? "text-[#E31E24]" : "text-gray-900"}`}>{item.value}</span>
-            </div>
-          ))}
-          {/* 실시간 업데이트 표시 */}
-          <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+      <div className="max-w-screen-xl mx-auto px-4 py-2.5">
+        <div className="flex items-center gap-6 overflow-x-auto scrollbar-hide">
+          {/* 업데이트 시간 — 맨 앞 */}
+          <div className="flex items-center gap-1.5 shrink-0">
             <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
             <span className="text-[11px] text-gray-400">{lastUpdatedText()}</span>
           </div>
+          <span className="text-gray-200 text-xs shrink-0">|</span>
+          {items.map((item) => (
+            <div key={item.label} className="flex items-center gap-1.5 shrink-0">
+              <span className="text-[11px] text-gray-400">{item.label}</span>
+              <span className="text-[13px] font-bold text-gray-900">{item.value}</span>
+            </div>
+          ))}
         </div>
       </div>
     </div>
