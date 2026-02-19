@@ -115,7 +115,7 @@ async def fetch_naver_shopping(query: str, client: httpx.AsyncClient) -> "dict |
 
 async def fetch_naver_cafe_deals() -> list[dict]:
     """카페 핫딜 → Naver Shopping 매칭 → 딜 목록 반환"""
-    from app.services.categorizer import normalize_category
+    from app.services.categorizer import infer_category
 
     try:
         articles = await fetch_cafe_articles(page=1, per_page=30)
@@ -177,7 +177,7 @@ async def fetch_naver_cafe_deals() -> list[dict]:
             article_url = f"https://cafe.naver.com/f-e/cafes/{CAFE_ID}/articles/{art.get('articleId')}"
 
             source_tag = parse_source_from_title(title)
-            category = normalize_category(title + " " + query)
+            category = infer_category(title + " " + query)
 
             deals.append({
                 "title": title[:200],
