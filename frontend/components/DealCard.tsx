@@ -188,9 +188,12 @@ export default function DealCard({ deal, onClick }: DealCardProps) {
 
         {/* 하단: 조회 + 추천 */}
         <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
-          <span className="text-[11px] text-gray-400">
-            조회 {deal.views?.toLocaleString() ?? 0}
-          </span>
+          {(deal.views ?? 0) >= 10 && (
+            <span className="text-[11px] text-gray-400">
+              조회 {deal.views!.toLocaleString()}
+            </span>
+          )}
+          {(deal.views ?? 0) < 10 && <span />}
           <button
             onClick={handleUpvote}
             disabled={voted}

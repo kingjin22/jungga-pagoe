@@ -140,7 +140,7 @@ def upvote_deal(deal_id: int) -> dict:
     current = sb.table("deals").select("upvotes").eq("id", deal_id).limit(1).execute()
     if not current.data:
         return None
-    new_upvotes = int(current.data.get("upvotes", 0)) + 1
+    new_upvotes = int(current.data[0].get("upvotes", 0)) + 1
     is_hot = new_upvotes >= 10
     sb.table("deals").update({"upvotes": new_upvotes, "is_hot": is_hot}).eq("id", deal_id).execute()
     return {"upvotes": new_upvotes, "is_hot": is_hot}

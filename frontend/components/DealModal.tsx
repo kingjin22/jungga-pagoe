@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Deal, formatPrice, reportDeal } from "@/lib/api";
+import { Deal, formatPrice, reportDeal, getDeal } from "@/lib/api";
 
 const SOURCE_LABEL: Record<string, string> = {
   coupang: "쿠팡",
@@ -17,6 +17,14 @@ interface DealModalProps {
 export default function DealModal({ deal, onClose }: DealModalProps) {
   const [reported, setReported] = useState(false);
   const [reporting, setReporting] = useState(false);
+  const [freshDeal, setFreshDeal] = useState<Deal | null>(null);
+
+  // 모달 열릴 때 API 호출 → 조회수 증가 + 최신 데이터
+  useEffect(() => {
+    if (!deal) { setFreshDeal(null); return; }
+    setFreshDeal(deal); // 먼저 기존 데이터로 표시
+    getDeal(deal.id).then(d => { if (d) setFreshDeal(d); }).catch(() => {});
+  }, [deal?.id]);
 
   const handleReport = async () => {
     if (!deal || reported || reporting) return;
@@ -45,29 +53,31 @@ export default function DealModal({ deal, onClose }: DealModalProps) {
     };
   }, [deal, onClose]);
 
-  if (!deal) return null;
+  const d = freshDeal ?? deal;
+  if (!d) return null;
+  // 이하 deal → d 로 참조 (freshDeal 우선)
 
-  const saved = deal.original_price - deal.sale_price;
-  const targetUrl = deal.affiliate_url || deal.product_url;
+  const saved = d.original_price - d.sale_price;
+  const targetUrl = d.affiliate_url || d.product_url;
 
   // Schema.org Product JSON-LD
   const productJsonLd = {
     "@context": "https://schema.org",
     "@type": "Product",
-    name: deal.title,
-    image: deal.image_url,
-    description: deal.description || `${deal.title} 최저가 할인`,
+    name: d.title,
+    image: d.image_url,
+    description: d.description || `${d.title} 최저가 할인`,
     offers: {
       "@type": "Offer",
-      price: deal.sale_price,
+      price: d.sale_price,
       priceCurrency: "KRW",
       availability: "https://schema.org/InStock",
       url: targetUrl,
       priceValidUntil: new Date(Date.now() + 86400000 * 3).toISOString().split("T")[0],
-      ...(deal.original_price > deal.sale_price && {
+      ...(d.original_price > d.sale_price && {
         priceSpecification: {
           "@type": "PriceSpecification",
-          price: deal.original_price,
+          price: d.original_price,
           priceCurrency: "KRW",
         },
       }),
@@ -104,10 +114,10 @@ export default function DealModal({ deal, onClose }: DealModalProps) {
 
         {/* 이미지 */}
         <div className="aspect-square bg-gray-100">
-          {deal.image_url ? (
+          {d.image_url ? (
             <img
-              src={deal.image_url}
-              alt={deal.title}
+              src={d.image_url}
+              alt={d.title}
               className="w-full h-full object-cover"
             />
           ) : (
@@ -122,26 +132,26 @@ export default function DealModal({ deal, onClose }: DealModalProps) {
           {/* 메타 */}
           <div className="flex items-center gap-2 mb-2">
             <span className="text-[11px] text-gray-400 font-medium">
-              {SOURCE_LABEL[deal.source] || deal.source}
+              {SOURCE_LABEL[d.source] || d.source}
             </span>
             <span className="text-gray-200">|</span>
-            <span className="text-[11px] text-gray-400">{deal.category}</span>
-            {deal.submitter_name && (
+            <span className="text-[11px] text-gray-400">{d.category}</span>
+            {d.submitter_name && (
               <>
                 <span className="text-gray-200">|</span>
-                <span className="text-[11px] text-gray-400">by {deal.submitter_name}</span>
+                <span className="text-[11px] text-gray-400">by {d.submitter_name}</span>
               </>
             )}
           </div>
 
           {/* 제목 */}
           <h2 className="text-base font-bold text-gray-900 leading-snug mb-3">
-            {deal.title}
+            {d.title}
           </h2>
 
           {/* 신뢰 뱃지 */}
           <div className="flex flex-wrap gap-1.5 mb-4">
-            {deal.source === "naver" ? (
+            {d.source === "naver" ? (
               <>
                 <span className="inline-flex items-center gap-1 text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-sm font-medium">
                   ✓ MSRP 정가 대비 할인
@@ -165,19 +175,19 @@ export default function DealModal({ deal, onClose }: DealModalProps) {
           {/* 가격 */}
           <div className="bg-gray-50 p-4 mb-4">
             <div className="flex items-baseline gap-2 mb-1">
-              {deal.discount_rate > 0 && (
+              {d.discount_rate > 0 && (
                 <span className="text-2xl font-black text-[#E31E24]">
-                  -{Math.round(deal.discount_rate)}%
+                  -{Math.round(d.discount_rate)}%
                 </span>
               )}
               <span className="text-2xl font-black text-gray-900">
-                {formatPrice(deal.sale_price)}
+                {formatPrice(d.sale_price)}
               </span>
             </div>
-            {deal.discount_rate > 0 && (
+            {d.discount_rate > 0 && (
               <>
                 <p className="text-sm text-gray-400 line-through">
-                  정가 {formatPrice(deal.original_price)}
+                  정가 {formatPrice(d.original_price)}
                 </p>
                 <p className="text-sm text-gray-600 mt-1 font-medium">
                   {formatPrice(saved)} 절약
@@ -187,12 +197,12 @@ export default function DealModal({ deal, onClose }: DealModalProps) {
           </div>
 
           {/* 가격변동 경고 */}
-          {deal.status === "price_changed" && (
+          {d.status === "price_changed" && (
             <div className="bg-amber-50 border border-amber-200 px-4 py-3 mb-4">
               <p className="text-sm font-semibold text-amber-700 mb-0.5">⚠️ 가격이 변동되었습니다</p>
               <p className="text-xs text-amber-600">
                 등록 당시 가격과 다를 수 있습니다.
-                {deal.verified_price && ` 현재 확인된 가격: ${formatPrice(deal.verified_price)}`}
+                {d.verified_price && ` 현재 확인된 가격: ${formatPrice(d.verified_price)}`}
               </p>
             </div>
           )}
@@ -227,16 +237,16 @@ export default function DealModal({ deal, onClose }: DealModalProps) {
           )}
 
           {/* 설명 */}
-          {deal.description && (
+          {d.description && (
             <p className="text-sm text-gray-600 leading-relaxed mb-4 border-l-2 border-gray-200 pl-3">
-              {deal.description}
+              {d.description}
             </p>
           )}
 
           {/* 통계 */}
           <div className="flex gap-4 text-xs text-gray-400 mb-5">
-            <span>조회 {deal.views.toLocaleString()}</span>
-            <span>추천 {deal.upvotes}</span>
+            {(d.views ?? 0) >= 10 && <span>조회 {d.views!.toLocaleString()}</span>}
+            {(d.upvotes ?? 0) >= 10 && <span>추천 {d.upvotes}</span>}
           </div>
 
           {/* 구매 버튼 */}
@@ -246,10 +256,10 @@ export default function DealModal({ deal, onClose }: DealModalProps) {
             rel="noopener noreferrer sponsored"
             className="block w-full text-center bg-[#111] text-white font-bold py-3.5 text-sm hover:bg-[#333] transition-colors"
           >
-            {deal.sale_price === 0 ? "지금 무료로 받기" : "지금 최저가 구매"}
+            {d.sale_price === 0 ? "지금 무료로 받기" : "지금 최저가 구매"}
           </a>
 
-          {deal.affiliate_url && (
+          {d.affiliate_url && (
             <p className="text-[10px] text-gray-300 text-center mt-2">
               이 링크는 제휴 마케팅 링크입니다
             </p>
