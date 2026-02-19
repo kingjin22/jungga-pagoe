@@ -88,6 +88,47 @@ PRODUCT_MSRP: list[dict] = [
     {"query": "드롱기 디디카 에스프레소 머신",       "msrp": 399_000, "category": "생활가전", "brand": "De'Longhi"},
     {"query": "쿠쿠 IH 압력밥솥 6인용",            "msrp": 279_000, "category": "생활가전", "brand": "Cuckoo"},
     {"query": "필립스 에어프라이어 XXL",            "msrp": 219_000, "category": "생활가전", "brand": "Philips"},
+
+    # ── Garmin (스마트워치/GPS) ─────────────────────────────────────
+    {"query": "가민 포러너 265 GPS 러닝워치",       "msrp": 649_000, "category": "전자기기", "brand": "Garmin"},
+    {"query": "가민 포러너 165 GPS 러닝워치",       "msrp": 399_000, "category": "전자기기", "brand": "Garmin"},
+    {"query": "가민 에픽스 프로 Gen2 47mm",        "msrp": 1_099_000, "category": "전자기기", "brand": "Garmin"},
+    {"query": "가민 비보액티브 5 스마트워치",        "msrp": 449_000, "category": "전자기기", "brand": "Garmin"},
+
+    # ── Coros (스마트워치) ─────────────────────────────────────────
+    {"query": "코로스 에이펙스2 프로 GPS 스마트워치", "msrp": 799_000, "category": "전자기기", "brand": "Coros"},
+    {"query": "코로스 페이스3 GPS 러닝워치",        "msrp": 499_000, "category": "전자기기", "brand": "Coros"},
+
+    # ── Logitech (마우스/키보드) ───────────────────────────────────
+    {"query": "로지텍 MX Master 3S 무선마우스",    "msrp": 139_000, "category": "전자기기", "brand": "Logitech"},
+    {"query": "로지텍 MX Keys S 무선키보드",       "msrp": 149_000, "category": "전자기기", "brand": "Logitech"},
+    {"query": "로지텍 G Pro X Superlight 2",      "msrp": 199_000, "category": "전자기기", "brand": "Logitech"},
+
+    # ── Anker (충전기/보조배터리) ──────────────────────────────────
+    {"query": "앤커 MagGo 무선충전기 15W",         "msrp": 59_000, "category": "전자기기", "brand": "Anker"},
+    {"query": "앤커 파워코어 슬림 10000 PD",       "msrp": 49_000, "category": "전자기기", "brand": "Anker"},
+
+    # ── 로봇청소기 ────────────────────────────────────────────────
+    {"query": "로보락 S8 MaxV Ultra 로봇청소기",   "msrp": 1_699_000, "category": "생활가전", "brand": "Roborock"},
+    {"query": "로보락 Q5 Pro 로봇청소기",          "msrp": 699_000, "category": "생활가전", "brand": "Roborock"},
+    {"query": "에코백스 디봇 X2 Omni 로봇청소기",   "msrp": 1_499_000, "category": "생활가전", "brand": "Ecovacs"},
+
+    # ── 모니터 ────────────────────────────────────────────────────
+    {"query": "LG 울트라기어 27인치 4K 게이밍 모니터", "msrp": 799_000, "category": "전자기기", "brand": "LG"},
+    {"query": "삼성 오디세이 27인치 QHD 게이밍 모니터", "msrp": 699_000, "category": "전자기기", "brand": "Samsung"},
+
+    # ── 아디다스 (신발) ────────────────────────────────────────────
+    {"query": "아디다스 울트라부스트 23 런닝화",    "msrp": 199_000, "category": "신발", "brand": "Adidas"},
+    {"query": "아디다스 아디제로 아디오스 프로3",   "msrp": 259_000, "category": "신발", "brand": "Adidas"},
+
+    # ── On (온러닝) ────────────────────────────────────────────────
+    {"query": "온러닝 클라우드몬스터 2 런닝화",     "msrp": 229_000, "category": "신발", "brand": "On"},
+    {"query": "온러닝 클라우드수르퍼 5 런닝화",     "msrp": 199_000, "category": "신발", "brand": "On"},
+
+    # ── 스킨케어 추가 ──────────────────────────────────────────────
+    {"query": "랑콤 제니피크 세럼 50ml",           "msrp": 178_000, "category": "뷰티", "brand": "Lancome"},
+    {"query": "시세이도 퍼펙팅 파운데이션 SPF",    "msrp": 82_000, "category": "뷰티", "brand": "Shiseido"},
+    {"query": "아이오페 레티놀 엑스퍼트 0.1",      "msrp": 68_000, "category": "뷰티", "brand": "IOPE"},
 ]
 
 

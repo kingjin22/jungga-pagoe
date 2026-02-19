@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { Deal, formatPrice, upvoteDeal } from "@/lib/api";
 
 interface DealCardProps {
@@ -63,6 +64,8 @@ export default function DealCard({ deal, onClick }: DealCardProps) {
   const targetUrl = deal.affiliate_url || deal.product_url;
   const isFree = deal.sale_price === 0;
   const retailer = extractRetailer(deal.title, deal.submitter_name);
+  const brandSlug = retailer ? retailer.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") : "";
+  const hasBrandPage = !!brandSlug && /^[a-z]/.test(brandSlug); // 영문 브랜드만
 
   const handleUpvote = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -118,9 +121,17 @@ export default function DealCard({ deal, onClick }: DealCardProps) {
           </div>
         )}
 
-        {/* 출처 칩 (리테일러 or 소스) */}
+        {/* 출처 칩 (리테일러 or 소스) — 브랜드 페이지 있으면 링크 */}
         <div className="absolute bottom-2 left-2 flex gap-1">
-          {retailer ? (
+          {retailer && hasBrandPage ? (
+            <Link
+              href={`/brand/${brandSlug}`}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-black/65 text-white text-[10px] font-medium px-1.5 py-0.5 leading-tight hover:bg-black/85 transition-colors"
+            >
+              {retailer}
+            </Link>
+          ) : retailer ? (
             <span className="bg-black/65 text-white text-[10px] font-medium px-1.5 py-0.5 leading-tight">
               {retailer}
             </span>

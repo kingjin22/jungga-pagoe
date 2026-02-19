@@ -42,5 +42,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
   } catch {}
 
-  return [...staticPages, ...brandPages, ...categoryPages];
+  // 딜 상세 페이지 (active 딜만)
+  let dealPages: MetadataRoute.Sitemap = [];
+  try {
+    const res = await fetch(`${API_BASE}/api/deals?size=100&sort=discount`, { next: { revalidate: 1800 } });
+    if (res.ok) {
+      const data: { items: { id: number; updated_at: string }[] } = await res.json();
+      dealPages = data.items.map((d) => ({
+        url: `${BASE_URL}/deal/${d.id}`,
+        lastModified: new Date(d.updated_at),
+        changeFrequency: "daily" as const,
+        priority: 0.6,
+      }));
+    }
+  } catch {}
+
+  return [...staticPages, ...brandPages, ...categoryPages, ...dealPages];
 }
