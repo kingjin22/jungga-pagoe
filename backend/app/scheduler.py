@@ -68,9 +68,16 @@ async def _sync_ppomppu():
             is_free = sale == 0
             if not is_free and not (has_image and has_real_url):
                 continue
+
+            # ★ 철칙: 할인 없는 딜은 수집 금지
+            original = item.get("original_price", 0) or 0
+            dr = item.get("discount_rate", 0.0) or 0.0
+            has_real_discount = (original > sale and sale > 0) or dr > 0
+            if not is_free and not has_real_discount:
+                continue
+
             if db.deal_url_exists(item["product_url"]):
                 continue
-            dr = item.get("discount_rate", 0.0)
             db.create_deal({"title": item["title"], "description": item.get("description"),
                 "original_price": item.get("original_price", sale), "sale_price": sale,
                 "discount_rate": dr, "image_url": item.get("image_url"),
