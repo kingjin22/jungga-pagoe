@@ -15,26 +15,11 @@ scheduler = AsyncIOScheduler()
 
 
 async def _sync_coupang():
-    try:
-        import app.db_supabase as db
-        from app.services.coupang import get_best_deals
-        deals_data = await get_best_deals(limit=30)
-        created = 0
-        for item in deals_data:
-            if db.deal_url_exists(item["product_url"]):
-                continue
-            orig, sale = item.get("original_price", 0), item.get("sale_price", 0)
-            if orig <= 0 or sale <= 0: continue
-            dr = round((1 - sale / orig) * 100, 1)
-            if dr < 5: continue
-            db.create_deal({"title": item["title"], "original_price": orig, "sale_price": sale,
-                "discount_rate": dr, "image_url": item.get("image_url"),
-                "product_url": item["product_url"], "affiliate_url": item.get("affiliate_url"),
-                "source": "coupang", "status": "active", "is_hot": dr >= 40})
-            created += 1
-        logger.info(f"✅ 쿠팡 sync: {created}개")
-    except Exception as e:
-        logger.error(f"❌ 쿠팡 sync: {e}")
+    # 쿠팡 파트너스 API 승인 전까지 비활성화
+    # 샘플 데이터(link.coupang.com/sample)는 이미지 없고 링크 불통 → 사용자 경험 최악
+    # 파트너스 승인 후 partners.coupang.com에서 API 키 받아 활성화
+    logger.info("⏸ 쿠팡 sync 비활성화 (파트너스 승인 대기 중)")
+    return
 
 
 async def _sync_naver():
@@ -77,11 +62,11 @@ async def _sync_ppomppu():
             if any(r in title_lower for r in OVERSEAS_RETAILERS):
                 continue
 
-            # 품질 기준: 이미지 있거나 실제 쇼핑몰 URL이 있어야 저장
+            # 품질 기준: 이미지 AND 실제 쇼핑몰 URL 둘 다 있어야 저장 (무료 제외)
             has_image = bool(item.get("image_url"))
-            has_real_url = item["product_url"] and "ppomppu.co.kr" not in item["product_url"]
-            is_free = sale == 0  # 무료 딜은 이미지 없어도 저장
-            if not (has_image or has_real_url or is_free):
+            has_real_url = bool(item["product_url"] and "ppomppu.co.kr" not in item["product_url"])
+            is_free = sale == 0
+            if not is_free and not (has_image and has_real_url):
                 continue
             if db.deal_url_exists(item["product_url"]):
                 continue
