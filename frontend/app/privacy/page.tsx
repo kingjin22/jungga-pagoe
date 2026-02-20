@@ -76,7 +76,7 @@ export default function PrivacyPage() {
           <h2 className="text-base font-bold text-gray-900 mb-2">9. 개인정보 보호책임자</h2>
           <ul className="list-none space-y-1">
             <li><strong>담당:</strong> 정가파괴 운영팀</li>
-            <li><strong>이메일:</strong> contact@jungga-pagoe.com</li>
+            <li><strong>이메일:</strong> kingjin22@gmail.com</li>
           </ul>
         </section>
 
