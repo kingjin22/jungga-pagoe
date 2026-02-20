@@ -333,7 +333,7 @@ def get_admin_metrics(date_str: Optional[str] = None) -> dict:
     day_end_utc = day_end_kst.astimezone(timezone.utc).isoformat()
 
     # 오늘 이벤트
-    today_events_res = sb.table("event_logs").select("event_type").gte("created_at", day_start_utc).lt("created_at", day_end_utc).execute()
+    today_events_res = sb.table("event_logs").select("event_type").gte("created_at", day_start_utc).lt("created_at", day_end_utc).limit(10000).execute()
     today_events = today_events_res.data or []
 
     pv_count = sum(1 for e in today_events if e["event_type"] == "page_view")
@@ -341,11 +341,11 @@ def get_admin_metrics(date_str: Optional[str] = None) -> dict:
     click_count = sum(1 for e in today_events if e["event_type"] == "outbound_click")
     deal_open_count = sum(1 for e in today_events if e["event_type"] == "deal_open")
 
-    # 활성 딜 수
-    active_count = sb.table("deals").select("id", count="exact").in_("status", ["active", "price_changed"]).execute().count or 0
+    # 활성 딜 수 (active만)
+    active_count = sb.table("deals").select("id", count="exact").eq("status", "active").execute().count or 0
 
-    # 오늘 신규 딜 수
-    new_deals_count = sb.table("deals").select("id", count="exact").gte("created_at", day_start_utc).lt("created_at", day_end_utc).execute().count or 0
+    # 오늘 신규 딜 수 (active만)
+    new_deals_count = sb.table("deals").select("id", count="exact").eq("status", "active").gte("created_at", day_start_utc).lt("created_at", day_end_utc).execute().count or 0
 
     # 최근 7일 추이
     trend = []
@@ -388,6 +388,7 @@ def get_admin_metrics(date_str: Optional[str] = None) -> dict:
         "date": target_date.strftime("%Y-%m-%d"),
         "today": {
             "pv": pv_count,
+            "impressions": impression_count,
             "clicks": click_count,
             "deal_opens": deal_open_count,
             "active_deals": active_count,
