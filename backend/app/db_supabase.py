@@ -172,10 +172,10 @@ def deal_url_exists(product_url: str) -> bool:
 
 
 def deal_duplicate_exists(title: str, sale_price: float, tolerance: float = 0.03) -> bool:
-    """제목 + 가격 기준 중복 체크 (URL이 달라도 같은 제품 방지)
+    """제목 기준 중복 체크 — 같은 제목이면 최저가 1개만 유지
     
-    같은 제목의 active 딜이 있고, 가격 차이가 tolerance(3%) 이내면 중복으로 판단.
-    gmarket/쿠팡 등에서 동일 제품을 다른 URL로 수집하는 경우 방지.
+    URL이 달라도 동일 제목의 active 딜이 이미 있으면 중복으로 판단.
+    단, 새 딜이 더 싸면(tolerance 초과) 기존 딜을 만료하고 새 딜 허용.
     """
     sb = get_supabase()
     res = (
@@ -191,9 +191,11 @@ def deal_duplicate_exists(title: str, sale_price: float, tolerance: float = 0.03
         existing_price = float(existing.get("sale_price") or 0)
         if existing_price <= 0:
             continue
-        price_diff = abs(existing_price - sale_price) / existing_price
-        if price_diff <= tolerance:
-            return True  # 중복
+        # 새 딜이 5% 이상 싸면 기존 것 만료하고 새 딜 허용
+        if sale_price < existing_price * (1 - tolerance):
+            sb.table("deals").update({"status": "expired"}).eq("id", existing["id"]).execute()
+            return False  # 새 딜(더 싼 것) 저장 허용
+        return True  # 기존 딜이 더 싸거나 비슷 → 중복, 저장 거부
     return False
 
 
