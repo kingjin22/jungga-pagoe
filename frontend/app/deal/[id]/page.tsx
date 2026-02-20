@@ -61,25 +61,45 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
   const brandSlug = slugify(deal.submitter_name || retailer || "");
   const cleanTitle = deal.title.replace(/^\[[^\]]+\]\s*/, "");
 
-  const jsonLd = {
+  const priceValidUntil = new Date(Date.now() + 86400000 * 3).toISOString().split("T")[0];
+
+  // Product 스키마 — Google Shopping 리치 결과용
+  const productJsonLd = {
     "@context": "https://schema.org",
     "@type": "Product",
-    name: deal.title,
-    image: deal.image_url,
-    description: `${deal.title} 최저가 ${formatPrice(deal.sale_price)}${dr > 0 ? ` (${dr}% 할인)` : ""}`,
+    name: cleanTitle,
+    image: deal.image_url ? [deal.image_url] : undefined,
+    description: `${cleanTitle} 최저가 ${formatPrice(deal.sale_price)}${dr > 0 ? ` (정가 ${formatPrice(deal.original_price)} 대비 ${dr}% 할인)` : ""}. 정가파괴에서 가격 히스토리를 확인하세요.`,
+    ...(retailer && {
+      brand: { "@type": "Brand", name: retailer },
+    }),
+    category: deal.category,
     offers: {
       "@type": "Offer",
       price: deal.sale_price,
       priceCurrency: "KRW",
       availability: "https://schema.org/InStock",
-      url: targetUrl,
-      priceValidUntil: new Date(Date.now() + 86400000 * 3).toISOString().split("T")[0],
+      url: `${BASE_URL}/deal/${id}`,
+      priceValidUntil,
+      seller: { "@type": "Organization", name: retailer || "온라인 쇼핑몰" },
     },
+  };
+
+  // BreadcrumbList 스키마 — 검색결과에 경로 표시
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "홈", item: BASE_URL },
+      { "@type": "ListItem", position: 2, name: deal.category, item: `${BASE_URL}/?category=${encodeURIComponent(deal.category)}` },
+      { "@type": "ListItem", position: 3, name: cleanTitle, item: `${BASE_URL}/deal/${id}` },
+    ],
   };
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
 
       <div className="max-w-screen-lg mx-auto px-4 py-8">
         {/* 브레드크럼 */}

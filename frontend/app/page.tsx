@@ -43,8 +43,27 @@ export default async function HomePage({
     getCategories().catch(() => []),
   ]);
 
+  // ItemList 구조화 데이터 — Google 검색에 딜 목록 노출
+  const itemListJsonLd = dealsData.items.length > 0 ? {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: "정가파괴 핫딜 목록",
+    description: "브랜드 공식 정가 대비 진짜 할인만 모은 핫딜",
+    url: "https://jungga-pagoe.vercel.app",
+    numberOfItems: dealsData.total,
+    itemListElement: dealsData.items.slice(0, 10).map((deal: any, idx: number) => ({
+      "@type": "ListItem",
+      position: idx + 1,
+      url: `https://jungga-pagoe.vercel.app/deal/${deal.id}`,
+      name: deal.title,
+    })),
+  } : null;
+
   return (
     <>
+      {itemListJsonLd && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }} />
+      )}
       <PageViewTracker />
       {/* 통계 바 */}
       <Suspense fallback={null}>
