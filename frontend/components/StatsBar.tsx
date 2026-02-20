@@ -10,13 +10,13 @@ async function fetchStats() {
   }
 }
 
-function lastUpdatedText(): string {
-  const now = new Date();
-  const mins = now.getMinutes();
-  const elapsed = mins % 30;
-  if (elapsed === 0) return "방금 업데이트";
-  if (elapsed === 1) return "1분 전 업데이트";
-  return `${elapsed}분 전 업데이트`;
+function lastUpdatedText(lastUpdatedAt?: string): string {
+  if (!lastUpdatedAt) return "10분마다 업데이트";
+  const diff = Math.floor((Date.now() - new Date(lastUpdatedAt).getTime()) / 60000);
+  if (diff <= 0) return "방금 업데이트";
+  if (diff === 1) return "1분 전 업데이트";
+  if (diff < 10) return `${diff}분 전 업데이트`;
+  return "10분마다 업데이트";
 }
 
 export default async function StatsBar() {
@@ -42,7 +42,7 @@ export default async function StatsBar() {
           {/* 업데이트 시간 — 맨 앞 */}
           <div className="flex items-center gap-1.5 shrink-0">
             <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-[11px] text-gray-400">{lastUpdatedText()}</span>
+            <span className="text-[11px] text-gray-400">{lastUpdatedText(stats.last_updated_at)}</span>
           </div>
           <span className="text-gray-200 text-xs shrink-0">|</span>
           {items.map((item) => (

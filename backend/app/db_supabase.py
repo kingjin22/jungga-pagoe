@@ -237,21 +237,20 @@ def get_stats() -> dict:
     today_kst_start = now_kst.replace(hour=0, minute=0, second=0, microsecond=0)
     today_utc_start = today_kst_start.astimezone(timezone.utc).isoformat()
 
-    total = sb.table("deals").select("id", count="exact").in_("status", ["active", "price_changed"]).execute().count or 0
-    hot = sb.table("deals").select("id", count="exact").eq("is_hot", True).in_("status", ["active", "price_changed"]).execute().count or 0
+    total = sb.table("deals").select("id", count="exact").eq("status", "active").execute().count or 0
+    hot = sb.table("deals").select("id", count="exact").eq("is_hot", True).eq("status", "active").execute().count or 0
     expired = sb.table("deals").select("id", count="exact").eq("status", "expired").execute().count or 0
     price_changed = sb.table("deals").select("id", count="exact").eq("status", "price_changed").execute().count or 0
-    today_added = sb.table("deals").select("id", count="exact").gte("created_at", today_utc_start).in_("status", ["active", "price_changed"]).execute().count or 0
+    today_added = sb.table("deals").select("id", count="exact").gte("created_at", today_utc_start).eq("status", "active").execute().count or 0
 
     # 평균 할인율
-    rates_res = sb.table("deals").select("discount_rate").in_("status", ["active", "price_changed"]).execute()
+    rates_res = sb.table("deals").select("discount_rate").eq("status", "active").execute()
     rates = [r["discount_rate"] for r in (rates_res.data or []) if r.get("discount_rate")]
     avg_discount = round(sum(rates) / len(rates), 1) if rates else 0.0
 
-    active_statuses = ["active", "price_changed"]
-    coupang_count = sb.table("deals").select("id", count="exact").eq("source", "coupang").in_("status", active_statuses).execute().count or 0
-    naver_count = sb.table("deals").select("id", count="exact").eq("source", "naver").in_("status", active_statuses).execute().count or 0
-    community_count = sb.table("deals").select("id", count="exact").eq("source", "community").in_("status", active_statuses).execute().count or 0
+    coupang_count = sb.table("deals").select("id", count="exact").eq("source", "coupang").eq("status", "active").execute().count or 0
+    naver_count = sb.table("deals").select("id", count="exact").eq("source", "naver").eq("status", "active").execute().count or 0
+    community_count = sb.table("deals").select("id", count="exact").eq("source", "community").eq("status", "active").execute().count or 0
 
     # 오늘 방문자 수 (page_view 이벤트)
     today_utc_end = (today_kst_start + timedelta(days=1)).astimezone(timezone.utc).isoformat()
@@ -265,9 +264,20 @@ def get_stats() -> dict:
     except Exception:
         today_visitors = 0
 
+    # 실제 마지막 가격 검증 시간 (10분 사이클 표시용)
+    try:
+        lv_res = sb.table("deals").select("last_verified_at") \
+            .eq("status", "active") \
+            .order("last_verified_at", desc=True) \
+            .limit(1).execute()
+        last_verified = (lv_res.data or [{}])[0].get("last_verified_at")
+    except Exception:
+        last_verified = None
+
     return {
         "total_deals": total,
         "hot_deals": hot,
+        "last_updated_at": last_verified,
         "by_source": {"coupang": coupang_count, "naver": naver_count, "community": community_count},
         "today_added": today_added,
         "avg_discount": avg_discount,
