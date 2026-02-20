@@ -80,6 +80,11 @@ async def generate_affiliate_link(coupang_url: str) -> Optional[str]:
         return None
 
     encoded = quote(coupang_url, safe="")
+
+    # AFATK 쿠키 = xToken 값 (동일) → 자동 추가
+    if "AFATK=" not in cookie:
+        cookie = f"AFATK={token}; {cookie}".strip("; ")
+
     headers = {
         "X-Token": token,
         "Referer": "https://partners.coupang.com/",
@@ -88,9 +93,8 @@ async def generate_affiliate_link(coupang_url: str) -> Optional[str]:
             "AppleWebKit/537.36 (KHTML, like Gecko) "
             "Chrome/120.0.0.0 Safari/537.36"
         ),
+        "Cookie": cookie,
     }
-    if cookie:
-        headers["Cookie"] = cookie
 
     try:
         async with httpx.AsyncClient(base_url=PARTNERS_BASE, timeout=10) as client:
