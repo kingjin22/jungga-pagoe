@@ -119,31 +119,24 @@ export default function DealCard({ deal, onClick }: DealCardProps) {
           </div>
         )}
 
-        {/* 무료 뱃지 */}
-        {isFree && (
-          <div className="absolute top-0 left-0 bg-emerald-600 text-white text-sm font-black px-2 py-1 leading-none">
-            FREE
+        {/* 상단 배지 — 하나만 표시 */}
+        {isFree ? (
+          <div className="absolute top-0 left-0 bg-emerald-600 text-white text-[11px] font-bold px-2.5 py-1.5 leading-none tracking-wide">
+            무료
           </div>
-        )}
-
-        {/* 할인율 뱃지 */}
-        {!isFree && deal.discount_rate > 0 && (
-          <div className="absolute top-0 left-0 bg-[#E31E24] text-white text-sm font-black px-2 py-1 leading-none">
-            -{Math.round(deal.discount_rate)}%
-          </div>
-        )}
-
-        {/* 가격변동 / HOT 뱃지 */}
-        {deal.status === "price_changed" && (
-          <div className="absolute top-0 right-0 bg-amber-500 text-white text-[10px] font-bold px-1.5 py-1 leading-none">
+        ) : deal.status === "price_changed" ? (
+          <div className="absolute top-0 left-0 bg-amber-500 text-white text-[11px] font-bold px-2.5 py-1.5 leading-none tracking-wide">
             가격변동
           </div>
-        )}
-        {deal.is_hot && deal.status !== "price_changed" && !isFree && (
-          <div className="absolute top-0 right-0 bg-[#E31E24] text-white text-[10px] font-bold px-2 py-1 leading-none tracking-widest uppercase">
-            HOT
+        ) : deal.is_hot ? (
+          <div className="absolute top-0 left-0 bg-[#E31E24] text-white text-[11px] font-bold px-2.5 py-1.5 leading-none tracking-wide">
+            핫딜
           </div>
-        )}
+        ) : deal.discount_rate > 0 ? (
+          <div className="absolute top-0 left-0 bg-[#E31E24] text-white text-[11px] font-bold px-2.5 py-1.5 leading-none">
+            -{Math.round(deal.discount_rate)}%
+          </div>
+        ) : null}
 
         {/* 출처 칩 (리테일러 or 소스) — 브랜드 페이지 있으면 링크 */}
         <div className="absolute bottom-2 left-2 flex gap-1">
