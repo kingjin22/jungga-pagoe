@@ -13,6 +13,7 @@ export default function AdminLayout({
   const router = useRouter();
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);  // 훅은 항상 최상단에
 
   useEffect(() => {
     setMounted(true);
@@ -20,6 +21,14 @@ export default function AdminLayout({
       router.replace("/admin/login");
     }
   }, [pathname, router]);
+
+  useEffect(() => {
+    if (pathname === "/admin/login") return;
+    if (!isAdminLoggedIn()) return;
+    import("@/lib/admin-api").then(({ getPendingDeals }) => {
+      getPendingDeals().then((r: { total: number }) => setPendingCount(r.total ?? 0)).catch(() => {});
+    });
+  }, [pathname]);
 
   // 로그인 페이지는 레이아웃 없이 렌더
   if (pathname === "/admin/login") {
@@ -37,14 +46,6 @@ export default function AdminLayout({
   if (!isAdminLoggedIn()) {
     return null;
   }
-
-  const [pendingCount, setPendingCount] = useState(0);
-
-  useEffect(() => {
-    if (pathname === "/admin/login") return;
-    const { getPendingDeals } = require("@/lib/admin-api");
-    getPendingDeals().then((r: { total: number }) => setPendingCount(r.total ?? 0)).catch(() => {});
-  }, [pathname]);
 
   const navItems = [
     { href: "/admin/dashboard", label: "대시보드" },
