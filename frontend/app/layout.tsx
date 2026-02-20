@@ -67,8 +67,9 @@ export default async function RootLayout({
               <div>
                 <p className="font-black text-lg tracking-tight mb-1">정가파괴</p>
                 <p className="text-xs text-gray-400 leading-relaxed">
-                  본 사이트의 일부 링크는 제휴 마케팅 링크입니다.<br />
-                  쿠팡 파트너스 활동을 통해 일정액의 수수료를 제공받을 수 있습니다.
+                  본 사이트의 일부 링크는 <strong className="text-gray-500">쿠팡 파트너스 제휴 링크</strong>입니다.<br />
+                  해당 링크를 통해 구매하면 판매 금액의 일부가 수수료로 지급됩니다.<br />
+                  이는 구매자에게 추가 비용을 발생시키지 않습니다.
                 </p>
               </div>
               <div className="flex gap-8 text-xs text-gray-400">
@@ -76,6 +77,13 @@ export default async function RootLayout({
                   <p className="font-semibold text-gray-600 mb-2">서비스</p>
                   <ul className="space-y-1">
                     <li><a href="/submit" className="hover:text-gray-900">딜 제보</a></li>
+                  </ul>
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-600 mb-2">정책</p>
+                  <ul className="space-y-1">
+                    <li><a href="/terms" className="hover:text-gray-900">이용약관</a></li>
+                    <li><a href="/privacy" className="hover:text-gray-900">개인정보처리방침</a></li>
                   </ul>
                 </div>
               </div>
