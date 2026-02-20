@@ -1,6 +1,7 @@
-from fastapi import APIRouter, HTTPException, Query, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Query, BackgroundTasks, Request
 from typing import Optional
 from app.schemas.deal import DealSubmitCommunity, DealResponse, DealListResponse
+from app.rate_limit import limiter
 import app.db_supabase as db
 
 router = APIRouter(prefix="/api/deals", tags=["deals"])
@@ -85,7 +86,8 @@ async def get_deal(deal_id: int):
 
 
 @router.post("/{deal_id}/upvote")
-async def upvote_deal(deal_id: int):
+@limiter.limit("10/minute")  # IP당 1분에 10회 제한
+async def upvote_deal(request: Request, deal_id: int):
     result = db.upvote_deal(deal_id)
     if not result:
         raise HTTPException(status_code=404, detail="딜을 찾을 수 없습니다")
@@ -93,7 +95,9 @@ async def upvote_deal(deal_id: int):
 
 
 @router.post("/submit")
+@limiter.limit("3/10minutes")  # IP당 10분에 3회 제한
 async def submit_community_deal(
+    request: Request,
     deal_data: DealSubmitCommunity,
     background_tasks: BackgroundTasks,
 ):
@@ -342,7 +346,8 @@ async def _verify_submitted_deal(deal_id: int, product_url: str, submitted_price
 
 
 @router.post("/{deal_id}/report")
-async def report_deal(deal_id: int):
+@limiter.limit("5/minute")  # IP당 1분에 5회 제한
+async def report_deal(request: Request, deal_id: int):
     """가격 오류 신고 — 3회 이상 신고 시 자동 숨김"""
     from fastapi import HTTPException
     sb = db.get_supabase()
