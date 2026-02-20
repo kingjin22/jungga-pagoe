@@ -33,10 +33,15 @@ export default function AdminDashboardPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    getAdminMetrics()
-      .then(setMetrics)
-      .catch((e: Error) => setError(e.message))
-      .finally(() => setLoading(false));
+    const load = () =>
+      getAdminMetrics()
+        .then(setMetrics)
+        .catch((e: Error) => setError(e.message))
+        .finally(() => setLoading(false));
+
+    load();
+    const timer = setInterval(load, 30_000); // 30초마다 자동 갱신
+    return () => clearInterval(timer);
   }, []);
 
   if (loading) {
