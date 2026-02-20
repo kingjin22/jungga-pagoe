@@ -19,11 +19,15 @@ function VerifyBadge({ note }: { note?: string }) {
   return null;
 }
 
+const API = process.env.NEXT_PUBLIC_API_URL || "https://jungga-pagoe-production.up.railway.app";
+
 export default function ReviewPage() {
   const [deals, setDeals] = useState<AdminDeal[]>([]);
   const [loading, setLoading] = useState(true);
   const [rejectInput, setRejectInput] = useState<Record<number, string>>({});
   const [processing, setProcessing] = useState<number | null>(null);
+  const [reprocessing, setReprocessing] = useState(false);
+  const [reprocessResult, setReprocessResult] = useState<string | null>(null);
 
   const load = () => {
     getPendingDeals()
@@ -60,16 +64,50 @@ export default function ReviewPage() {
     }
   };
 
+  const handleReprocess = async () => {
+    setReprocessing(true);
+    setReprocessResult(null);
+    try {
+      const r = await fetch(`${API}/admin/reprocess-community-deals`, {
+        method: "POST",
+        headers: { "X-Admin-Key": localStorage.getItem("admin_key") || "" },
+      });
+      const d = await r.json();
+      setReprocessResult(
+        `완료: 총 ${d.total}건 | 식품만료 ${d.food_expired}건 | 활성화 ${d.activated}건 | 대기유지 ${d.kept_pending}건`
+      );
+      load();
+    } catch {
+      setReprocessResult("오류 발생");
+    } finally {
+      setReprocessing(false);
+    }
+  };
+
   if (loading) return <div className="p-8 text-sm text-gray-400">로딩 중...</div>;
 
   return (
     <div className="p-8 max-w-5xl">
-      <div className="mb-6">
-        <h1 className="text-xl font-black text-gray-900">제보 검토</h1>
-        <p className="text-sm text-gray-400 mt-0.5">
-          대기 <span className="font-bold text-gray-700">{pending.length}건</span>
-          {" · "}거부됨 <span className="font-bold text-gray-500">{rejected.length}건</span>
-        </p>
+      <div className="mb-6 flex items-start justify-between">
+        <div>
+          <h1 className="text-xl font-black text-gray-900">제보 검토</h1>
+          <p className="text-sm text-gray-400 mt-0.5">
+            대기 <span className="font-bold text-gray-700">{pending.length}건</span>
+            {" · "}거부됨 <span className="font-bold text-gray-500">{rejected.length}건</span>
+          </p>
+        </div>
+        <div className="flex flex-col items-end gap-1">
+          <button
+            onClick={handleReprocess}
+            disabled={reprocessing}
+            className="text-xs px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+          >
+            {reprocessing ? "처리 중..." : "🔄 커뮤니티 딜 자동 재처리"}
+          </button>
+          {reprocessResult && (
+            <p className="text-xs text-gray-500">{reprocessResult}</p>
+          )}
+        </div>
       </div>
 
       {pending.length === 0 && (

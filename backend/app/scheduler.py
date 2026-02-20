@@ -394,6 +394,49 @@ async def _expire_old_deals():
         logger.error(f"❌ 딜 만료 처리 오류: {e}")
 
 
+async def _check_community_deal_expiry():
+    """커뮤니티 딜 원글 만료 감지 → 자동 expired 처리"""
+    try:
+        import app.db_supabase as db
+        from app.services.community_enricher import check_deal_expired_from_url
+        import asyncio
+
+        # 등록 후 1시간 이상 된 활성 커뮤니티 딜만 체크
+        deals = db.get_community_deals_for_expiry_check(hours_since_created=1)
+        if not deals:
+            return
+
+        logger.info(f"[커뮤니티 만료체크] {len(deals)}개 딜 확인 시작")
+        expired_count = 0
+
+        async def check_one(deal):
+            nonlocal expired_count
+            url = deal.get("source_post_url", "")
+            if not url:
+                return
+            is_expired, reason = await check_deal_expired_from_url(url)
+            if is_expired:
+                db.expire_deal(deal["id"])
+                # admin_note 업데이트
+                db.get_supabase().table("deals").update({
+                    "admin_note": f"[자동만료] 원글 종료 감지: {reason}"
+                }).eq("id", deal["id"]).execute()
+                expired_count += 1
+                logger.info(f"  ✅ 만료처리: {deal['title'][:30]} ({reason})")
+
+        # 동시에 최대 5개씩 체크 (과도한 요청 방지)
+        for i in range(0, len(deals), 5):
+            batch = deals[i:i+5]
+            await asyncio.gather(*[check_one(d) for d in batch])
+            await asyncio.sleep(1)
+
+        if expired_count:
+            logger.info(f"[커뮤니티 만료체크] 완료: {expired_count}/{len(deals)}개 만료")
+
+    except Exception as e:
+        logger.error(f"❌ 커뮤니티 만료체크 오류: {e}")
+
+
 async def _collect_price_snapshots():
     """일일 가격 스냅샷 (브랜드딜 42종 현재가 저장)"""
     try:
@@ -479,6 +522,13 @@ def start_scheduler():
         trigger=IntervalTrigger(hours=6),
         id="expire_old_deals",
         name="오래된 딜 자동 만료 (3일 이상)",
+        replace_existing=True,
+    )
+    scheduler.add_job(
+        _check_community_deal_expiry,
+        trigger=IntervalTrigger(minutes=30),
+        id="community_expiry_check",
+        name="커뮤니티 딜 원글 만료 자동 감지 (30m)",
         replace_existing=True,
     )
     scheduler.add_job(

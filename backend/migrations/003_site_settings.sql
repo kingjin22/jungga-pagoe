@@ -5,15 +5,9 @@ CREATE TABLE IF NOT EXISTS site_settings (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- RLS: 서비스 역할(backend)만 읽기/쓰기
-ALTER TABLE site_settings ENABLE ROW LEVEL SECURITY;
-
--- anon은 읽기만 가능 (선택사항, 민감한 키는 SELECT 금지 처리)
-CREATE POLICY "service_read" ON site_settings
-  FOR SELECT USING (true);
-
-CREATE POLICY "service_write" ON site_settings
-  FOR ALL USING (auth.role() = 'service_role');
+-- RLS 비활성화 (백엔드 서버에서만 접근, 브라우저 직접 접근 없음)
+-- 민감 키가 있으면 서비스롤 키로 업그레이드 고려
+ALTER TABLE site_settings DISABLE ROW LEVEL SECURITY;
 
 -- 초기값 삽입 (토큰은 나중에 /admin/update-coupang-token으로 갱신)
 INSERT INTO site_settings (key, value) VALUES

@@ -217,6 +217,25 @@ def deal_duplicate_exists(title: str, sale_price: float, tolerance: float = 0.03
     return False
 
 
+def get_community_deals_for_expiry_check(hours_since_created: int = 1) -> list[dict]:
+    """source_post_url이 있는 활성 커뮤니티 딜 목록 (만료 감지 대상)"""
+    import datetime
+    cutoff = (datetime.datetime.utcnow() - datetime.timedelta(hours=hours_since_created)).isoformat()
+    sb = get_supabase()
+    res = (
+        sb.table("deals")
+        .select("id, title, source_post_url, created_at, source")
+        .eq("source", "community")
+        .eq("status", "active")
+        .not_.is_("source_post_url", "null")
+        .lt("created_at", cutoff)
+        .order("created_at", desc=False)
+        .limit(100)
+        .execute()
+    )
+    return res.data or []
+
+
 def expire_deal(deal_id: int) -> dict:
     sb = get_supabase()
     res = (

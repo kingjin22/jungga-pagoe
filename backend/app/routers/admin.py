@@ -496,3 +496,61 @@ async def update_coupang_token(
         "message": "토큰 업데이트 완료",
         "test_link": test or "링크 생성 실패 (블랙리스트 또는 토큰 오류)",
     }
+
+
+@router.post("/reprocess-community-deals")
+async def reprocess_community_deals(
+    x_admin_key: Optional[str] = Header(None),
+):
+    """
+    pending 상태 커뮤니티 딜 일괄 재처리
+    - 식품/일상용품 → expired+[식품금지]
+    - 정가 탐지 성공 → active
+    - 탐지 실패 → 유지(수동 검토 필요)
+    """
+    verify_admin(x_admin_key)
+    from app.services.community_enricher import is_food_or_daily, lookup_msrp_from_naver
+    import app.db_supabase as db
+
+    sb = db.get_supabase()
+    res = (
+        sb.table("deals")
+        .select("id, title, sale_price, category, source")
+        .eq("source", "community")
+        .eq("status", "pending")
+        .execute()
+    )
+    deals = res.data or []
+    results = {"total": len(deals), "food_expired": 0, "activated": 0, "kept_pending": 0}
+
+    for deal in deals:
+        deal_id = deal["id"]
+        title = deal.get("title", "")
+        sale_price = int(deal.get("sale_price") or 0)
+        category = deal.get("category", "")
+
+        # 식품 필터
+        if is_food_or_daily(title, category):
+            sb.table("deals").update({
+                "status": "expired",
+                "admin_note": "[자동만료] 식품/일상용품 금지 카테고리",
+            }).eq("id", deal_id).execute()
+            results["food_expired"] += 1
+            continue
+
+        # MSRP 탐지
+        msrp = await lookup_msrp_from_naver(title, sale_price)
+        if msrp and msrp["original_price"] > sale_price and msrp["discount_rate"] >= 5:
+            patch = {
+                "status": "active",
+                "original_price": msrp["original_price"],
+                "discount_rate": msrp["discount_rate"],
+            }
+            if not deal.get("image_url") and msrp.get("image_url"):
+                patch["image_url"] = msrp["image_url"]
+            sb.table("deals").update(patch).eq("id", deal_id).execute()
+            results["activated"] += 1
+        else:
+            results["kept_pending"] += 1
+
+    return results
