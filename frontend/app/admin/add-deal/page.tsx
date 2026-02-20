@@ -255,7 +255,15 @@ export default function AddDealPage() {
             required
             placeholder="https://www.coupang.com/vp/products/..."
             value={form.product_url}
-            onChange={(e) => setForm({ ...form, product_url: e.target.value })}
+            onChange={(e) => {
+              const url = e.target.value.toLowerCase();
+              const source = url.includes("coupang.com") || url.includes("coupa.ng")
+                ? "coupang"
+                : url.includes("naver.com") || url.includes("smartstore")
+                ? "naver"
+                : form.source;
+              setForm({ ...form, product_url: e.target.value, source });
+            }}
             onBlur={(e) => handleUrlPaste(e.target.value)}
             className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-gray-500"
           />

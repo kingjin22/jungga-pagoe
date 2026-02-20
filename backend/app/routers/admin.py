@@ -306,6 +306,18 @@ async def quick_add_deal(
     category = body.category if body.category and body.category != "기타" \
         else infer_category(body.title)
 
+    # URL로 소스 자동 감지
+    url = body.product_url.lower()
+    if body.source in ("admin", "community"):
+        if "coupang.com" in url or "coupa.ng" in url or "coupang.net" in url:
+            detected_source = "coupang"
+        elif "naver.com" in url or "smartstore" in url:
+            detected_source = "naver"
+        else:
+            detected_source = body.source
+    else:
+        detected_source = body.source
+
     deal_data = {
         "title": body.title.strip(),
         "product_url": body.product_url.strip(),
@@ -314,7 +326,7 @@ async def quick_add_deal(
         "discount_rate": dr,
         "image_url": body.image_url.strip(),
         "category": category,
-        "source": body.source,
+        "source": detected_source,
         "description": body.description.strip(),
         "status": "active",  # 어드민 등록 → 바로 active
     }
