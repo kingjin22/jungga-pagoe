@@ -332,14 +332,19 @@ def get_admin_metrics(date_str: Optional[str] = None) -> dict:
     day_start_utc = day_start_kst.astimezone(timezone.utc).isoformat()
     day_end_utc = day_end_kst.astimezone(timezone.utc).isoformat()
 
-    # 오늘 이벤트
-    today_events_res = sb.table("event_logs").select("event_type").gte("created_at", day_start_utc).lt("created_at", day_end_utc).limit(10000).execute()
-    today_events = today_events_res.data or []
+    # 오늘 이벤트 — count=exact로 row limit 없이 정확 집계
+    def _count_events(event_type: str) -> int:
+        res = sb.table("event_logs").select("id", count="exact") \
+            .eq("event_type", event_type) \
+            .gte("created_at", day_start_utc) \
+            .lt("created_at", day_end_utc) \
+            .execute()
+        return res.count or 0
 
-    pv_count = sum(1 for e in today_events if e["event_type"] == "page_view")
-    impression_count = sum(1 for e in today_events if e["event_type"] == "impression")
-    click_count = sum(1 for e in today_events if e["event_type"] == "outbound_click")
-    deal_open_count = sum(1 for e in today_events if e["event_type"] == "deal_open")
+    pv_count = _count_events("page_view")
+    impression_count = _count_events("impression")
+    click_count = _count_events("outbound_click")
+    deal_open_count = _count_events("deal_open")
 
     # 활성 딜 수 (active만)
     active_count = sb.table("deals").select("id", count="exact").eq("status", "active").execute().count or 0
@@ -353,12 +358,14 @@ def get_admin_metrics(date_str: Optional[str] = None) -> dict:
         d_kst = now_kst - timedelta(days=i)
         d_start = d_kst.replace(hour=0, minute=0, second=0, microsecond=0).astimezone(timezone.utc).isoformat()
         d_end = (d_kst.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)).astimezone(timezone.utc).isoformat()
-        day_ev = sb.table("event_logs").select("event_type").gte("created_at", d_start).lt("created_at", d_end).execute().data or []
+        def _cnt(evt):
+            r = sb.table("event_logs").select("id", count="exact").eq("event_type", evt).gte("created_at", d_start).lt("created_at", d_end).execute()
+            return r.count or 0
         trend.append({
             "date": d_kst.strftime("%Y-%m-%d"),
-            "pv": sum(1 for e in day_ev if e["event_type"] == "page_view"),
-            "clicks": sum(1 for e in day_ev if e["event_type"] == "outbound_click"),
-            "deal_opens": sum(1 for e in day_ev if e["event_type"] == "deal_open"),
+            "pv": _cnt("page_view"),
+            "clicks": _cnt("outbound_click"),
+            "deal_opens": _cnt("deal_open"),
         })
 
     # Top 10 딜 (오늘 클릭 기준)

@@ -27,7 +27,15 @@ async def get_metrics(
     x_admin_key: Optional[str] = Header(None),
 ):
     verify_admin(x_admin_key)
-    return db.get_admin_metrics(date)
+    from fastapi.responses import JSONResponse
+    data = db.get_admin_metrics(date)
+    return JSONResponse(
+        content=data,
+        headers={
+            "Cache-Control": "no-store, no-cache, must-revalidate",
+            "Pragma": "no-cache",
+        }
+    )
 
 
 # ──────────────────────────────────────────

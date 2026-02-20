@@ -12,9 +12,11 @@ async function adminFetch<T>(
   const key = getAdminKey();
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
+    cache: "no-store",
     headers: {
       "Content-Type": "application/json",
       "X-Admin-Key": key,
+      "Cache-Control": "no-cache",
       ...(options.headers || {}),
     },
   });
