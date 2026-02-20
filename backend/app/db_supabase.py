@@ -154,6 +154,20 @@ def create_deal(data: dict) -> dict:
     sale = float(data.get("sale_price", 0))
     if orig > 0 and sale > 0:
         data["discount_rate"] = round((1 - sale / orig) * 100, 1)
+
+    # ══ 철칙 최후 방어선 ══════════════════════════════
+    # 무료딜(sale=0)은 예외, 나머지는 정가 > 판매가 필수
+    if sale > 0 and orig <= sale:
+        raise ValueError(
+            f"[철칙위반] original_price({orig}) <= sale_price({sale}) — 저장 거부: {data.get('title','')[:40]}"
+        )
+    dr = float(data.get("discount_rate", 0))
+    if sale > 0 and dr <= 0:
+        raise ValueError(
+            f"[철칙위반] discount_rate={dr}% — 저장 거부: {data.get('title','')[:40]}"
+        )
+    # ═══════════════════════════════════════════════
+
     data.setdefault("status", "active")
     data.setdefault("is_hot", data.get("discount_rate", 0) >= 40)
     res = sb.table("deals").insert(data).execute()

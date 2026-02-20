@@ -250,11 +250,16 @@ async def fetch_ppomppu_deals() -> list[dict]:
             elif deal["krw_price"]:
                 sale_price = float(deal["krw_price"])
                 dr = deal["discount_rate"]
-                orig_price = round(sale_price / (1 - dr / 100)) if dr > 0 else sale_price
+                if dr <= 0:
+                    # 할인율 없는 커뮤니티 딜 — 철칙: 정가 기준 할인 없으면 수집 금지
+                    continue
+                orig_price = round(sale_price / (1 - dr / 100))
             elif deal["usd_price"]:
                 sale_price = round(deal["usd_price"] * usd_krw / 100) * 100  # 백원 단위 반올림
                 dr = deal["discount_rate"]
-                orig_price = sale_price
+                if dr <= 0:
+                    continue
+                orig_price = round(sale_price / (1 - dr / 100))
             else:
                 continue
 
