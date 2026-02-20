@@ -16,6 +16,13 @@ logger = logging.getLogger(__name__)
 
 SOLD_OUT_TEXTS = ["품절", "일시품절", "판매종료", "Sold Out", "품절입니다", "재고 없음", "구매불가"]
 
+# 뽐뿌 포스트 종결 감지
+PPOMPPU_ENDED_SENTINEL = "__PPOMPPU_ENDED__"
+PPOMPPU_ENDED_TEXTS = [
+    "품절 / 종결 / 취소된 게시물", "품절/종결/취소된 게시물",
+    "종결된 게시물", "품절된 게시물", "취소된 게시물",
+]
+
 
 @dataclass
 class PriceResult:
@@ -277,6 +284,13 @@ async def fetch_retailer_url_from_ppomppu(ppomppu_post_url: str, playwright_page
             )
             await page.goto(ppomppu_post_url, timeout=12000, wait_until="domcontentloaded")
             await page.wait_for_timeout(1000)
+
+            # 품절/종결/취소 감지
+            body_text = await page.evaluate("() => document.body?.innerText || ''")
+            for ended_text in PPOMPPU_ENDED_TEXTS:
+                if ended_text in body_text:
+                    logger.info(f"[ppomppu 품절감지] '{ended_text}' 발견 → {ppomppu_post_url}")
+                    return PPOMPPU_ENDED_SENTINEL
 
             links = await page.evaluate("""() => {
                 return Array.from(document.querySelectorAll('a[href]')).map(a => a.href);

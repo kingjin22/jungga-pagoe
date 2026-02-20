@@ -135,7 +135,12 @@ async def _sync_ppomppu():
                     continue
 
                 # ── 실제 쇼핑몰 URL 추출 ──────────────────────
+                from app.services.price_scrapers.playwright_scraper import PPOMPPU_ENDED_SENTINEL
                 retailer_url = await fetch_retailer_url_from_ppomppu(ppomppu_url, playwright_page=page)
+                if retailer_url == PPOMPPU_ENDED_SENTINEL:
+                    logger.info(f"[뽐뿌품절] 종결된 게시물 스킵: {item['title'][:40]}")
+                    skipped += 1
+                    continue
                 if not retailer_url:
                     logger.debug(f"[뽐뿌skip] 쇼핑몰 URL 없음: {item['title'][:40]}")
                     skipped += 1
