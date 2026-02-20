@@ -328,9 +328,11 @@ def log_event(
 
 def get_admin_metrics(date_str: Optional[str] = None) -> dict:
     """당일 집계 + 최근 7일 추이 + Top10 딜
-    최적화: 7일치 이벤트를 단일 쿼리로 가져와 Python에서 집계 (21개 → 3개 쿼리)
+    최적화: count=exact 쿼리를 ThreadPoolExecutor로 병렬 실행 (8s → ~1s)
     """
-    from collections import Counter, defaultdict
+    from collections import Counter
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
     sb = get_supabase()
     KST = timezone(timedelta(hours=9))
     now_kst = datetime.now(KST)
@@ -349,73 +351,80 @@ def get_admin_metrics(date_str: Optional[str] = None) -> dict:
     day_end_utc = (day_start_kst + timedelta(days=1)).astimezone(timezone.utc).isoformat()
     today_str = day_start_kst.strftime("%Y-%m-%d")
 
-    # 7일 전 시작
-    seven_ago_kst = (now_kst - timedelta(days=6)).replace(hour=0, minute=0, second=0, microsecond=0)
-    seven_ago_utc = seven_ago_kst.astimezone(timezone.utc).isoformat()
-
-    # ── 쿼리 1: 7일치 이벤트 한번에 (page 크기 최대로) ──
-    EVENT_TYPES = ["page_view", "impression", "outbound_click", "deal_open"]
-    events_res = sb.table("event_logs") \
-        .select("event_type,created_at,deal_id") \
-        .gte("created_at", seven_ago_utc) \
-        .in_("event_type", EVENT_TYPES) \
-        .limit(50000) \
-        .execute()
-    all_events = events_res.data or []
-
-    # Python에서 날짜별 집계
-    day_buckets: dict = defaultdict(lambda: defaultdict(int))
-    click_counter: Counter = Counter()
-
-    for evt in all_events:
-        try:
-            ts = evt["created_at"].replace("Z", "+00:00")
-            event_kst = datetime.fromisoformat(ts).astimezone(KST)
-            d_str = event_kst.strftime("%Y-%m-%d")
-        except Exception:
-            continue
-        etype = evt.get("event_type", "")
-        day_buckets[d_str][etype] += 1
-        if etype == "outbound_click" and d_str == today_str and evt.get("deal_id"):
-            click_counter[evt["deal_id"]] += 1
-
-    today_b = day_buckets[today_str]
-    pv_count = today_b["page_view"]
-    impression_count = today_b["impression"]
-    click_count = today_b["outbound_click"]
-    deal_open_count = today_b["deal_open"]
-
-    # ── 쿼리 2: 활성 딜 수 ──
-    active_count = sb.table("deals").select("id", count="exact").eq("status", "active").execute().count or 0
-
-    # ── 쿼리 3: 오늘 신규 딜 ──
-    new_deals_count = sb.table("deals").select("id", count="exact") \
-        .eq("status", "active") \
-        .gte("created_at", day_start_utc) \
-        .lt("created_at", day_end_utc) \
-        .execute().count or 0
-
-    # 7일 트렌드 (Python 집계 결과 사용, 추가 쿼리 없음)
-    trend = []
+    # 날짜 범위 미리 계산
+    day_ranges = []
     for i in range(6, -1, -1):
         d_kst = now_kst - timedelta(days=i)
         d_str = d_kst.strftime("%Y-%m-%d")
-        b = day_buckets[d_str]
-        trend.append({
-            "date": d_str,
-            "pv": b["page_view"],
-            "clicks": b["outbound_click"],
-            "deal_opens": b["deal_open"],
-        })
+        d_start = d_kst.replace(hour=0, minute=0, second=0, microsecond=0).astimezone(timezone.utc).isoformat()
+        d_end = (d_kst.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)).astimezone(timezone.utc).isoformat()
+        day_ranges.append((d_str, d_start, d_end))
 
-    # Top 10 딜 (오늘 클릭 기준, 집계 이미 완료)
+    EVENT_TYPES = ["page_view", "impression", "outbound_click", "deal_open"]
+
+    def _count(event_type: str, start: str, end: str) -> int:
+        try:
+            res = sb.table("event_logs").select("id", count="exact") \
+                .eq("event_type", event_type) \
+                .gte("created_at", start).lt("created_at", end) \
+                .execute()
+            return res.count or 0
+        except Exception:
+            return 0
+
+    # ── 병렬 실행: 최대 20 스레드로 count 쿼리 동시 처리 ──
+    tasks: dict = {}
+    with ThreadPoolExecutor(max_workers=20) as pool:
+        for d_str, d_start, d_end in day_ranges:
+            for etype in EVENT_TYPES:
+                f = pool.submit(_count, etype, d_start, d_end)
+                tasks[f] = (d_str, etype)
+        # 딜 수도 병렬
+        f_active = pool.submit(lambda: sb.table("deals").select("id", count="exact").eq("status", "active").execute().count or 0)
+        f_new = pool.submit(lambda: sb.table("deals").select("id", count="exact").eq("status", "active").gte("created_at", day_start_utc).lt("created_at", day_end_utc).execute().count or 0)
+        # Top10 click IDs (오늘 클릭 목록)
+        f_clicks = pool.submit(
+            lambda: sb.table("event_logs").select("deal_id")
+                .eq("event_type", "outbound_click")
+                .gte("created_at", day_start_utc).lt("created_at", day_end_utc)
+                .limit(5000).execute().data or []
+        )
+
+        # 결과 수집
+        day_buckets: dict = {d_str: {e: 0 for e in EVENT_TYPES} for d_str, _, _ in day_ranges}
+        for f in as_completed(tasks):
+            d_str, etype = tasks[f]
+            day_buckets[d_str][etype] = f.result()
+
+        active_count = f_active.result()
+        new_deals_count = f_new.result()
+        top10_raw = f_clicks.result()
+
+    today_b = day_buckets.get(today_str, {e: 0 for e in EVENT_TYPES})
+    pv_count = today_b.get("page_view", 0)
+    impression_count = today_b.get("impression", 0)
+    click_count = today_b.get("outbound_click", 0)
+    deal_open_count = today_b.get("deal_open", 0)
+
+    # 7일 트렌드
+    trend = [
+        {
+            "date": d_str,
+            "pv": day_buckets[d_str]["page_view"],
+            "clicks": day_buckets[d_str]["outbound_click"],
+            "deal_opens": day_buckets[d_str]["deal_open"],
+        }
+        for d_str, _, _ in day_ranges
+    ]
+
+    # Top 10 딜
+    click_counter: Counter = Counter(e["deal_id"] for e in top10_raw if e.get("deal_id"))
     top10_ids = [did for did, _ in click_counter.most_common(10)]
     top10_deals = []
     if top10_ids:
         deals_res = sb.table("deals") \
             .select("id,title,sale_price,discount_rate,source,upvotes") \
-            .in_("id", top10_ids) \
-            .execute().data or []
+            .in_("id", top10_ids).execute().data or []
         deal_map = {d["id"]: d for d in deals_res}
         for did in top10_ids:
             if did in deal_map:
