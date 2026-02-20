@@ -270,13 +270,21 @@ export default function AddDealPage() {
           {(form.product_url.toLowerCase().includes("coupang.com") ||
             form.product_url.toLowerCase().includes("coupa.ng")) &&
             !form.product_url.toLowerCase().includes("link.coupang.com") && (
-            <p className="mt-1 text-xs text-emerald-600">
-              ✓ 쿠팡 URL 감지 — 등록 시 파트너스 추적 링크로 자동 변환됩니다
-            </p>
+            <div className="mt-1 flex items-center gap-2">
+              <p className="text-xs text-amber-600">⚠ 파트너스 링크 아님 — 아래 버튼으로 변환 후 붙여넣기</p>
+              <a
+                href={`https://partners.coupang.com/#affiliate/ws/link-to-any-page?url=${encodeURIComponent(form.product_url)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs px-2 py-0.5 bg-red-600 text-white rounded hover:bg-red-700"
+              >
+                파트너스 링크 생성 →
+              </a>
+            </div>
           )}
           {form.product_url.toLowerCase().includes("link.coupang.com") && (
-            <p className="mt-1 text-xs text-blue-600">
-              ✓ 파트너스 링크 확인됨
+            <p className="mt-1 text-xs text-emerald-600">
+              ✅ 파트너스 추적 링크 확인됨
             </p>
           )}
         </div>
