@@ -6,11 +6,12 @@ import { submitDeal } from "@/lib/api";
 import Link from "next/link";
 
 const CATEGORIES = [
+  { value: "", label: "자동 감지" },
   { value: "전자기기", label: "전자기기" },
+  { value: "신발", label: "신발" },
   { value: "패션", label: "패션" },
-  { value: "식품", label: "식품" },
+  { value: "생활가전", label: "생활가전" },
   { value: "뷰티", label: "뷰티" },
-  { value: "홈리빙", label: "홈리빙" },
   { value: "스포츠", label: "스포츠" },
   { value: "유아동", label: "유아동" },
   { value: "기타", label: "기타" },
@@ -27,7 +28,7 @@ export default function SubmitPage() {
     sale_price: "",
     product_url: "",
     image_url: "",
-    category: "기타",
+    category: "",
     description: "",
     submitter_name: "",
   });
@@ -77,7 +78,7 @@ export default function SubmitPage() {
                 setSuccess(false);
                 setForm({
                   title: "", original_price: "", sale_price: "",
-                  product_url: "", image_url: "", category: "기타",
+                  product_url: "", image_url: "", category: "",
                   description: "", submitter_name: "",
                 });
               }}

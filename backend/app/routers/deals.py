@@ -105,7 +105,9 @@ async def submit_community_deal(
         raise HTTPException(status_code=400, detail="할인율이 10% 이상인 딜만 제보 가능합니다")
 
     from app.services.categorizer import infer_category
-    category = deal_data.category or infer_category(deal_data.title)
+    # 카테고리 미입력 또는 기타 → 자동 분류 시도
+    category = deal_data.category if deal_data.category and deal_data.category != "기타" \
+        else infer_category(deal_data.title)
 
     # pending으로 저장 — 심사 전 노출 금지
     sb = db.get_supabase()
