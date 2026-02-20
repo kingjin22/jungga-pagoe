@@ -471,3 +471,28 @@ async def get_coupang_affiliate_link(
             detail="링크 생성 실패 — 토큰 만료 또는 블랙리스트 상품"
         )
     return {"original_url": url, "affiliate_url": affiliate_url}
+
+
+class UpdateCoupangToken(BaseModel):
+    token: str
+    cookie: str = ""
+
+
+@router.post("/update-coupang-token")
+async def update_coupang_token(
+    body: UpdateCoupangToken,
+    x_admin_key: Optional[str] = Header(None),
+):
+    """쿠팡 파트너스 xToken 갱신 — DB 저장, 재배포 불필요"""
+    verify_admin(x_admin_key)
+    from app.services.coupang_partners import update_token, generate_affiliate_link
+    ok = await update_token(body.token, body.cookie)
+    if not ok:
+        raise HTTPException(status_code=500, detail="DB 저장 실패")
+    # 테스트 링크 생성으로 토큰 유효성 확인
+    test = await generate_affiliate_link("https://www.coupang.com/vp/products/7554201576")
+    return {
+        "ok": True,
+        "message": "토큰 업데이트 완료",
+        "test_link": test or "링크 생성 실패 (블랙리스트 또는 토큰 오류)",
+    }
