@@ -327,7 +327,10 @@ def log_event(
 
 
 def get_admin_metrics(date_str: Optional[str] = None) -> dict:
-    """당일 집계 + 최근 7일 추이 + Top10 딜"""
+    """당일 집계 + 최근 7일 추이 + Top10 딜
+    최적화: 7일치 이벤트를 단일 쿼리로 가져와 Python에서 집계 (21개 → 3개 쿼리)
+    """
+    from collections import Counter, defaultdict
     sb = get_supabase()
     KST = timezone(timedelta(hours=9))
     now_kst = datetime.now(KST)
@@ -340,57 +343,79 @@ def get_admin_metrics(date_str: Optional[str] = None) -> dict:
     else:
         target_date = now_kst
 
-    # 당일 범위 (KST → UTC)
+    # 당일 범위
     day_start_kst = target_date.replace(hour=0, minute=0, second=0, microsecond=0)
-    day_end_kst = day_start_kst + timedelta(days=1)
     day_start_utc = day_start_kst.astimezone(timezone.utc).isoformat()
-    day_end_utc = day_end_kst.astimezone(timezone.utc).isoformat()
+    day_end_utc = (day_start_kst + timedelta(days=1)).astimezone(timezone.utc).isoformat()
+    today_str = day_start_kst.strftime("%Y-%m-%d")
 
-    # 오늘 이벤트 — count=exact로 row limit 없이 정확 집계
-    def _count_events(event_type: str) -> int:
-        res = sb.table("event_logs").select("id", count="exact") \
-            .eq("event_type", event_type) \
-            .gte("created_at", day_start_utc) \
-            .lt("created_at", day_end_utc) \
-            .execute()
-        return res.count or 0
+    # 7일 전 시작
+    seven_ago_kst = (now_kst - timedelta(days=6)).replace(hour=0, minute=0, second=0, microsecond=0)
+    seven_ago_utc = seven_ago_kst.astimezone(timezone.utc).isoformat()
 
-    pv_count = _count_events("page_view")
-    impression_count = _count_events("impression")
-    click_count = _count_events("outbound_click")
-    deal_open_count = _count_events("deal_open")
+    # ── 쿼리 1: 7일치 이벤트 한번에 (page 크기 최대로) ──
+    EVENT_TYPES = ["page_view", "impression", "outbound_click", "deal_open"]
+    events_res = sb.table("event_logs") \
+        .select("event_type,created_at,deal_id") \
+        .gte("created_at", seven_ago_utc) \
+        .in_("event_type", EVENT_TYPES) \
+        .limit(50000) \
+        .execute()
+    all_events = events_res.data or []
 
-    # 활성 딜 수 (active만)
+    # Python에서 날짜별 집계
+    day_buckets: dict = defaultdict(lambda: defaultdict(int))
+    click_counter: Counter = Counter()
+
+    for evt in all_events:
+        try:
+            ts = evt["created_at"].replace("Z", "+00:00")
+            event_kst = datetime.fromisoformat(ts).astimezone(KST)
+            d_str = event_kst.strftime("%Y-%m-%d")
+        except Exception:
+            continue
+        etype = evt.get("event_type", "")
+        day_buckets[d_str][etype] += 1
+        if etype == "outbound_click" and d_str == today_str and evt.get("deal_id"):
+            click_counter[evt["deal_id"]] += 1
+
+    today_b = day_buckets[today_str]
+    pv_count = today_b["page_view"]
+    impression_count = today_b["impression"]
+    click_count = today_b["outbound_click"]
+    deal_open_count = today_b["deal_open"]
+
+    # ── 쿼리 2: 활성 딜 수 ──
     active_count = sb.table("deals").select("id", count="exact").eq("status", "active").execute().count or 0
 
-    # 오늘 신규 딜 수 (active만)
-    new_deals_count = sb.table("deals").select("id", count="exact").eq("status", "active").gte("created_at", day_start_utc).lt("created_at", day_end_utc).execute().count or 0
+    # ── 쿼리 3: 오늘 신규 딜 ──
+    new_deals_count = sb.table("deals").select("id", count="exact") \
+        .eq("status", "active") \
+        .gte("created_at", day_start_utc) \
+        .lt("created_at", day_end_utc) \
+        .execute().count or 0
 
-    # 최근 7일 추이
+    # 7일 트렌드 (Python 집계 결과 사용, 추가 쿼리 없음)
     trend = []
     for i in range(6, -1, -1):
         d_kst = now_kst - timedelta(days=i)
-        d_start = d_kst.replace(hour=0, minute=0, second=0, microsecond=0).astimezone(timezone.utc).isoformat()
-        d_end = (d_kst.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)).astimezone(timezone.utc).isoformat()
-        def _cnt(evt):
-            r = sb.table("event_logs").select("id", count="exact").eq("event_type", evt).gte("created_at", d_start).lt("created_at", d_end).execute()
-            return r.count or 0
+        d_str = d_kst.strftime("%Y-%m-%d")
+        b = day_buckets[d_str]
         trend.append({
-            "date": d_kst.strftime("%Y-%m-%d"),
-            "pv": _cnt("page_view"),
-            "clicks": _cnt("outbound_click"),
-            "deal_opens": _cnt("deal_open"),
+            "date": d_str,
+            "pv": b["page_view"],
+            "clicks": b["outbound_click"],
+            "deal_opens": b["deal_open"],
         })
 
-    # Top 10 딜 (오늘 클릭 기준)
-    top10_res = sb.table("event_logs").select("deal_id").eq("event_type", "outbound_click").gte("created_at", day_start_utc).lt("created_at", day_end_utc).execute().data or []
-    from collections import Counter
-    click_counter = Counter(e["deal_id"] for e in top10_res if e.get("deal_id"))
+    # Top 10 딜 (오늘 클릭 기준, 집계 이미 완료)
     top10_ids = [did for did, _ in click_counter.most_common(10)]
-
     top10_deals = []
     if top10_ids:
-        deals_res = sb.table("deals").select("id,title,sale_price,discount_rate,source,upvotes").in_("id", top10_ids).execute().data or []
+        deals_res = sb.table("deals") \
+            .select("id,title,sale_price,discount_rate,source,upvotes") \
+            .in_("id", top10_ids) \
+            .execute().data or []
         deal_map = {d["id"]: d for d in deals_res}
         for did in top10_ids:
             if did in deal_map:
