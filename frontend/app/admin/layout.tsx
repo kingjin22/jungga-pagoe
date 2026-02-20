@@ -48,6 +48,7 @@ export default function AdminLayout({
 
   const navItems = [
     { href: "/admin/dashboard", label: "대시보드" },
+    { href: "/admin/add-deal", label: "➕ 딜 빠른 등록" },
     { href: "/admin/deals", label: "딜 관리" },
     { href: "/admin/review", label: "제보 검토", badge: pendingCount },
   ];

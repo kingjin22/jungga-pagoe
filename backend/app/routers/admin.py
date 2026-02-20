@@ -175,15 +175,15 @@ async def reject_deal(
     body: ReviewBody,
     x_admin_key: Optional[str] = Header(None),
 ):
-    """제보 딜 거부 → rejected"""
+    """제보 딜 거부 → expired (DB enum에 rejected 없음)"""
     verify_admin(x_admin_key)
     sb = db.get_supabase()
     reason = body.reason or "사유 미입력"
     sb.table("deals").update({
-        "status": "rejected",
-        "admin_note": f"❌ 거부: {reason}",
+        "status": "expired",
+        "admin_note": f"[거부] {reason}",
     }).eq("id", deal_id).execute()
-    return {"id": deal_id, "status": "rejected", "reason": reason}
+    return {"id": deal_id, "status": "expired", "reason": reason}
 
 
 # ──────────────────────────────────────────
@@ -213,3 +213,116 @@ async def rescrape_deal(
         return {"status": "rescrape_queued", "source": "naver"}
     else:
         return {"status": "not_supported", "source": deal.get("source"), "message": "naver 소스만 재수집 지원"}
+
+
+# ──────────────────────────────────────────
+# 어드민 빠른 딜 등록
+# ──────────────────────────────────────────
+
+class QuickAddDeal(BaseModel):
+    product_url: str
+    title: str
+    sale_price: int
+    original_price: int
+    category: str = ""
+    image_url: str = ""
+    description: str = ""
+    source: str = "admin"
+    brand: str = ""
+
+
+@router.get("/lookup")
+async def lookup_product(
+    q: str = Query(..., description="상품명 또는 URL"),
+    x_admin_key: Optional[str] = Header(None),
+):
+    """상품명/URL → Naver 검색으로 제목·정가·이미지 자동 완성"""
+    verify_admin(x_admin_key)
+    import re
+    # URL이 오면 핵심 키워드 추출
+    keyword = q
+    if q.startswith("http"):
+        # 쿠팡 등 URL에서 상품명 추출 시도
+        keyword = re.sub(r"https?://[^\s]+", "", q).strip() or q
+        # URL 마지막 path segment 활용
+        parts = q.rstrip("/").split("/")
+        for p in reversed(parts):
+            p = re.sub(r"[^가-힣a-zA-Z0-9\s]", " ", p).strip()
+            if len(p) > 5:
+                keyword = p
+                break
+
+    try:
+        import urllib.request, urllib.parse
+        from app.config import settings
+        headers = {
+            "X-Naver-Client-Id": settings.NAVER_CLIENT_ID,
+            "X-Naver-Client-Secret": settings.NAVER_CLIENT_SECRET,
+        }
+        query = urllib.parse.urlencode({"query": keyword, "display": 5, "sort": "sim"})
+        req = urllib.request.Request(
+            f"https://openapi.naver.com/v1/search/shop.json?{query}", headers=headers
+        )
+        with urllib.request.urlopen(req, timeout=5) as r:
+            import json, re as _re
+            data = json.loads(r.read())
+        items = data.get("items", [])
+        results = []
+        for item in items[:3]:
+            clean_title = _re.sub(r"<[^>]+>", "", item.get("title", ""))
+            results.append({
+                "title": clean_title,
+                "lprice": int(item.get("lprice") or 0),
+                "hprice": int(item.get("hprice") or 0),
+                "image": item.get("image", ""),
+                "brand": item.get("brand", ""),
+                "category": item.get("category1", ""),
+            })
+        return {"results": results, "keyword": keyword}
+    except Exception as e:
+        return {"results": [], "error": str(e), "keyword": keyword}
+
+
+@router.post("/deals/quick-add")
+async def quick_add_deal(
+    body: QuickAddDeal,
+    x_admin_key: Optional[str] = Header(None),
+):
+    """어드민 직접 등록 — 검증 없이 바로 active"""
+    verify_admin(x_admin_key)
+    from app.services.categorizer import infer_category
+
+    orig = body.original_price
+    sale = body.sale_price
+
+    # 철칙 최소 검증 (무료딜 제외)
+    if sale > 0 and orig <= sale:
+        raise HTTPException(status_code=400, detail=f"정가({orig})가 할인가({sale})보다 낮거나 같습니다")
+
+    dr = round((1 - sale / orig) * 100, 1) if orig > 0 and sale > 0 else 100.0
+    if sale > 0 and dr <= 0:
+        raise HTTPException(status_code=400, detail="할인율이 0 이하입니다")
+
+    category = body.category if body.category and body.category != "기타" \
+        else infer_category(body.title)
+
+    deal_data = {
+        "title": body.title.strip(),
+        "product_url": body.product_url.strip(),
+        "sale_price": sale,
+        "original_price": orig,
+        "discount_rate": dr,
+        "image_url": body.image_url.strip(),
+        "category": category,
+        "source": body.source,
+        "description": body.description.strip(),
+        "status": "active",  # 어드민 등록 → 바로 active
+    }
+    if body.brand:
+        deal_data["brand"] = body.brand
+
+    try:
+        deal = db.create_deal(deal_data)
+        return deal
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
