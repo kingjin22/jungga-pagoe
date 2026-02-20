@@ -142,7 +142,9 @@ def upvote_deal(deal_id: int) -> dict:
     if not current.data:
         return None
     new_upvotes = int(current.data[0].get("upvotes", 0)) + 1
-    is_hot = new_upvotes >= 10
+    # 추천 5개 이상 or 현재 이미 HOT이면 HOT 유지
+    cur_hot = bool((sb.table("deals").select("is_hot").eq("id", deal_id).limit(1).execute().data or [{}])[0].get("is_hot"))
+    is_hot = cur_hot or new_upvotes >= 5
     sb.table("deals").update({"upvotes": new_upvotes, "is_hot": is_hot}).eq("id", deal_id).execute()
     return {"upvotes": new_upvotes, "is_hot": is_hot}
 
@@ -169,7 +171,9 @@ def create_deal(data: dict) -> dict:
     # ═══════════════════════════════════════════════
 
     data.setdefault("status", "active")
-    data.setdefault("is_hot", data.get("discount_rate", 0) >= 40)
+    # is_hot: 외부에서 명시하지 않으면 할인율 기준으로 결정 (setdefault 아닌 강제 적용)
+    if "is_hot" not in data:
+        data["is_hot"] = data.get("discount_rate", 0) >= 30
     res = sb.table("deals").insert(data).execute()
     return _to_deal_dict(res.data[0])
 

@@ -550,5 +550,15 @@ async def _cleanup_invalid_deals():
             }).eq("id", d["id"]).execute()
             logger.info(f"🗑 자동만료(식품): #{d['id']} {d['title'][:35]}")
 
+        # 3) is_hot 동기화: 할인율 30% 이상인데 is_hot=False인 active 딜 수정
+        res3 = sb.table("deals").select("id,discount_rate") \
+            .eq("status", "active") \
+            .eq("is_hot", False) \
+            .gte("discount_rate", 30) \
+            .execute()
+        for d in (res3.data or []):
+            sb.table("deals").update({"is_hot": True}).eq("id", d["id"]).execute()
+            logger.info(f"⭐ is_hot 동기화: #{d['id']} {d['discount_rate']}%")
+
     except Exception as e:
         logger.error(f"❌ cleanup_invalid_deals 오류: {e}")
