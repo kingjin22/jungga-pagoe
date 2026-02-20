@@ -10,7 +10,7 @@ const SOURCE_LINKS = [
   { href: "/?source=coupang", label: "쿠팡" },
   { href: "/?source=naver", label: "네이버" },
   { href: "/?source=community", label: "커뮤니티" },
-  { href: "/?hot_only=true", label: "🔥 HOT딜", hot: true },
+  { href: "/?hot_only=true", label: "HOT딜", hot: true },
 ];
 
 interface HeaderProps {

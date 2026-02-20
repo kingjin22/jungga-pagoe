@@ -28,7 +28,7 @@ export default function HotBanner({ deals }: HotBannerProps) {
                 </p>
               </div>
               <h2 className="text-xl font-black text-gray-900 tracking-tight">
-                🔥 지금 가장 뜨거운 딜
+                지금 가장 인기 있는 딜
               </h2>
             </div>
           </div>
