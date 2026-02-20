@@ -158,6 +158,21 @@ export async function rescrapeAdminDeal(
   return adminFetch(`/admin/deals/${id}/rescrape`, { method: "POST" });
 }
 
+export async function getPendingDeals(): Promise<{ deals: AdminDeal[]; total: number }> {
+  return adminFetch("/admin/pending");
+}
+
+export async function approveDeal(id: number): Promise<{ id: number; status: string; discount_rate: number }> {
+  return adminFetch(`/admin/deals/${id}/approve`, { method: "POST" });
+}
+
+export async function rejectDeal(id: number, reason: string): Promise<{ id: number; status: string }> {
+  return adminFetch(`/admin/deals/${id}/reject`, {
+    method: "POST",
+    body: JSON.stringify({ reason }),
+  });
+}
+
 export function adminLogin(key: string): void {
   if (typeof window !== "undefined") {
     localStorage.setItem("admin_key", key);

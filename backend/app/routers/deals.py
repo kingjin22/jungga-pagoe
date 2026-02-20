@@ -107,7 +107,9 @@ async def submit_community_deal(
     from app.services.categorizer import infer_category
     category = deal_data.category or infer_category(deal_data.title)
 
-    payload = {
+    # pending으로 저장 — 심사 전 노출 금지
+    sb = db.get_supabase()
+    res = sb.table("deals").insert({
         "title": deal_data.title,
         "description": deal_data.description,
         "original_price": orig,
@@ -118,15 +120,16 @@ async def submit_community_deal(
         "category": category,
         "source": "community",
         "submitter_name": deal_data.submitter_name or "익명",
-        "status": "active",
-        "is_hot": discount_rate >= 40,
-    }
+        "status": "pending",
+        "is_hot": False,
+        "admin_note": "제보 대기 — 자동 가격 검증 중",
+    }).execute()
+    deal = res.data[0]
 
-    # 쿠팡 링크면 파트너스 링크 변환 (백그라운드)
-    if "coupang.com" in deal_data.product_url:
-        background_tasks.add_task(_convert_to_affiliate_bg, deal_data.product_url, payload)
-    
-    return db.create_deal(payload)
+    # 백그라운드: 자동 가격 검증
+    background_tasks.add_task(_verify_submitted_deal, deal["id"], deal_data.product_url, sale)
+
+    return {"id": deal["id"], "status": "pending", "message": "제보가 접수됐습니다. 검토 후 등록됩니다."}
 
 
 @router.patch("/{deal_id}/expire")
@@ -236,9 +239,71 @@ async def _convert_to_affiliate_bg(product_url: str, payload: dict):
     from app.services.coupang import get_affiliate_link
     affiliate_url = await get_affiliate_link(product_url)
     if affiliate_url and affiliate_url != product_url:
-        # 방금 생성된 딜의 affiliate_url 업데이트
         sb = db.get_supabase()
         sb.table("deals").update({"affiliate_url": affiliate_url}).eq("product_url", product_url).execute()
+
+
+async def _verify_submitted_deal(deal_id: int, product_url: str, submitted_price: float):
+    """
+    제보 딜 자동 가격 검증 (백그라운드)
+    - URL로 Naver 상품 검색 → lprice 비교
+    - ±15% 이내면 auto_verified → 어드민 검토 대기
+    - 명백 불일치 → auto_rejected
+    """
+    import httpx, re
+    from app.config import settings
+
+    sb = db.get_supabase()
+
+    async def _set_note(note: str, status: str = "pending"):
+        sb.table("deals").update({"admin_note": note, "status": status}).eq("id", deal_id).execute()
+
+    try:
+        # 1) 쿠팡/네이버/일반 쇼핑몰 URL — httpx로 페이지 가져와서 가격 파싱 시도
+        actual_price = None
+        async with httpx.AsyncClient(
+            timeout=8,
+            headers={"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"},
+            follow_redirects=True,
+        ) as client:
+            try:
+                resp = await client.get(product_url)
+                text = resp.text
+                # 가격 패턴 추출 (원 단위, 콤마 포함)
+                prices = re.findall(r'[\"\'>](\d{1,3}(?:,\d{3})+)(?:원|<)', text)
+                candidates = []
+                for p in prices:
+                    val = int(p.replace(",", ""))
+                    if val >= 1000:
+                        candidates.append(val)
+                if candidates:
+                    # 제보가와 가장 가까운 값
+                    actual_price = min(candidates, key=lambda x: abs(x - submitted_price))
+            except Exception:
+                pass
+
+        # 2) 검증 결과 판단
+        if actual_price is None:
+            # 크롤링 실패 → 어드민 수동 검토
+            await _set_note("⚠️ 자동 검증 실패 — 수동 확인 필요", "pending")
+            return
+
+        diff = abs(actual_price - submitted_price) / submitted_price
+        if diff <= 0.15:
+            # ✅ 가격 일치 → 자동 승인 대기 (어드민 확인 후 최종 승인)
+            await _set_note(
+                f"✅ 자동 검증 통과 — 제보:{submitted_price:,.0f}원 / 실제:{actual_price:,.0f}원 ({diff*100:.0f}% 오차)\n"
+                "어드민 최종 승인 대기 중"
+            )
+        else:
+            # ❌ 가격 불일치 → 자동 거부
+            await _set_note(
+                f"❌ 자동 거부 — 가격 불일치: 제보:{submitted_price:,.0f}원 / 실제:{actual_price:,.0f}원 ({diff*100:.0f}% 오차)",
+                "rejected",
+            )
+
+    except Exception as e:
+        await _set_note(f"⚠️ 검증 오류: {e}")
 
 
 @router.post("/{deal_id}/report")

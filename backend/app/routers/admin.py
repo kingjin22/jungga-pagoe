@@ -107,6 +107,80 @@ async def patch_admin_deal(
 
 
 # ──────────────────────────────────────────
+# 제보 검토 (Pending Review)
+# ──────────────────────────────────────────
+
+@router.get("/pending")
+async def get_pending_deals(
+    x_admin_key: Optional[str] = Header(None),
+):
+    """제보 대기 딜 목록 (pending + rejected 포함)"""
+    verify_admin(x_admin_key)
+    sb = db.get_supabase()
+    res = sb.table("deals") \
+        .select("*") \
+        .in_("status", ["pending", "rejected"]) \
+        .order("created_at", desc=True) \
+        .limit(100) \
+        .execute()
+    return {"deals": res.data or [], "total": len(res.data or [])}
+
+
+class ReviewBody(BaseModel):
+    reason: Optional[str] = None  # 거부 사유 (선택)
+
+
+@router.post("/deals/{deal_id}/approve")
+async def approve_deal(
+    deal_id: int,
+    x_admin_key: Optional[str] = Header(None),
+):
+    """제보 딜 승인 → active"""
+    verify_admin(x_admin_key)
+    sb = db.get_supabase()
+    deal = sb.table("deals").select("*").eq("id", deal_id).limit(1).execute().data
+    if not deal:
+        raise HTTPException(status_code=404, detail="딜을 찾을 수 없습니다")
+    d = deal[0]
+
+    # 철칙 검증
+    orig = float(d.get("original_price") or 0)
+    sale = float(d.get("sale_price") or 0)
+    if sale > 0 and orig <= sale:
+        raise HTTPException(status_code=400, detail=f"철칙 위반: original_price({orig}) <= sale_price({sale})")
+
+    dr = round((1 - sale / orig) * 100, 1) if orig > sale > 0 else 0
+    if dr <= 0:
+        raise HTTPException(status_code=400, detail="할인율 0% — 승인 불가")
+
+    sb.table("deals").update({
+        "status": "active",
+        "discount_rate": dr,
+        "is_hot": dr >= 25,
+        "admin_note": f"✅ 어드민 승인 | {d.get('admin_note', '')}",
+    }).eq("id", deal_id).execute()
+
+    return {"id": deal_id, "status": "active", "discount_rate": dr}
+
+
+@router.post("/deals/{deal_id}/reject")
+async def reject_deal(
+    deal_id: int,
+    body: ReviewBody,
+    x_admin_key: Optional[str] = Header(None),
+):
+    """제보 딜 거부 → rejected"""
+    verify_admin(x_admin_key)
+    sb = db.get_supabase()
+    reason = body.reason or "사유 미입력"
+    sb.table("deals").update({
+        "status": "rejected",
+        "admin_note": f"❌ 거부: {reason}",
+    }).eq("id", deal_id).execute()
+    return {"id": deal_id, "status": "rejected", "reason": reason}
+
+
+# ──────────────────────────────────────────
 # Rescrape
 # ──────────────────────────────────────────
 

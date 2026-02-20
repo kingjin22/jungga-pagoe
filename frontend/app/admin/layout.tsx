@@ -38,9 +38,18 @@ export default function AdminLayout({
     return null;
   }
 
+  const [pendingCount, setPendingCount] = useState(0);
+
+  useEffect(() => {
+    if (pathname === "/admin/login") return;
+    const { getPendingDeals } = require("@/lib/admin-api");
+    getPendingDeals().then((r: { total: number }) => setPendingCount(r.total ?? 0)).catch(() => {});
+  }, [pathname]);
+
   const navItems = [
     { href: "/admin/dashboard", label: "대시보드" },
     { href: "/admin/deals", label: "딜 관리" },
+    { href: "/admin/review", label: "제보 검토", badge: pendingCount },
   ];
 
   return (
@@ -60,13 +69,18 @@ export default function AdminLayout({
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center px-5 py-2.5 text-sm font-medium transition-colors ${
+                className={`flex items-center justify-between px-5 py-2.5 text-sm font-medium transition-colors ${
                   active
                     ? "text-[#E31E24] bg-red-50 border-r-2 border-[#E31E24]"
                     : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                 }`}
               >
                 {item.label}
+                {"badge" in item && item.badge > 0 && (
+                  <span className="bg-[#E31E24] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+                    {item.badge}
+                  </span>
+                )}
               </Link>
             );
           })}
