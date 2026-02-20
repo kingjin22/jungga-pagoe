@@ -56,6 +56,23 @@ export default function AddDealPage() {
       ? Math.round((1 - Number(form.sale_price) / Number(form.original_price)) * 100)
       : null;
 
+  /* ── URL 붙여넣기 → 자동 Naver 조회 ── */
+  const handleUrlPaste = async (url: string) => {
+    if (!url.startsWith("http") || form.title) return;
+    setLookupLoading(true);
+    try {
+      const res = await fetch(
+        `${API_BASE}/admin/lookup?q=${encodeURIComponent(url)}`,
+        { headers: { "X-Admin-Key": getAdminKey() } }
+      );
+      const data = await res.json();
+      const results: NaverResult[] = data.results || [];
+      if (results.length > 0) setLookupResults(results);
+    } catch { /* silent */ } finally {
+      setLookupLoading(false);
+    }
+  };
+
   /* ── Naver 자동완성 ── */
   const handleLookup = async () => {
     if (!lookupQuery.trim()) return;
@@ -239,6 +256,7 @@ export default function AddDealPage() {
             placeholder="https://www.coupang.com/vp/products/..."
             value={form.product_url}
             onChange={(e) => setForm({ ...form, product_url: e.target.value })}
+            onBlur={(e) => handleUrlPaste(e.target.value)}
             className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-gray-500"
           />
         </div>

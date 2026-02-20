@@ -323,6 +323,13 @@ async def quick_add_deal(
 
     try:
         deal = db.create_deal(deal_data)
+        # 이미지 없으면 Naver에서 자동 주입
+        if not deal_data.get("image_url") and deal:
+            from app.routers.deals import _fetch_naver_image
+            image = await _fetch_naver_image(deal_data["title"])
+            if image:
+                db.get_supabase().table("deals").update({"image_url": image}).eq("id", deal["id"]).execute()
+                deal["image_url"] = image
         return deal
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

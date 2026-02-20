@@ -245,12 +245,35 @@ async def _convert_to_affiliate_bg(product_url: str, payload: dict):
         sb.table("deals").update({"affiliate_url": affiliate_url}).eq("product_url", product_url).execute()
 
 
+async def _fetch_naver_image(title: str) -> Optional[str]:
+    """상품명으로 Naver 쇼핑 검색 → 첫 번째 이미지 URL 반환"""
+    try:
+        import urllib.request, urllib.parse, json, re as _re
+        from app.config import settings
+        headers = {
+            "X-Naver-Client-Id": settings.NAVER_CLIENT_ID,
+            "X-Naver-Client-Secret": settings.NAVER_CLIENT_SECRET,
+        }
+        query = urllib.parse.urlencode({"query": title, "display": 3, "sort": "sim"})
+        req = urllib.request.Request(
+            f"https://openapi.naver.com/v1/search/shop.json?{query}", headers=headers
+        )
+        with urllib.request.urlopen(req, timeout=5) as r:
+            items = json.loads(r.read()).get("items", [])
+        if items:
+            return items[0].get("image", "")
+    except Exception:
+        pass
+    return None
+
+
 async def _verify_submitted_deal(deal_id: int, product_url: str, submitted_price: float):
     """
     제보 딜 자동 가격 검증 (백그라운드)
     - URL로 Naver 상품 검색 → lprice 비교
     - ±15% 이내면 auto_verified → 어드민 검토 대기
     - 명백 불일치 → auto_rejected
+    - 이미지 없으면 Naver에서 자동 주입
     """
     import httpx, re
     from app.config import settings
@@ -261,6 +284,16 @@ async def _verify_submitted_deal(deal_id: int, product_url: str, submitted_price
         sb.table("deals").update({"admin_note": note, "status": status}).eq("id", deal_id).execute()
 
     try:
+        # 0) 이미지 자동 주입 (없는 경우)
+        deal_row = sb.table("deals").select("title, image_url").eq("id", deal_id).limit(1).execute().data
+        if deal_row:
+            existing_image = deal_row[0].get("image_url") or ""
+            if not existing_image:
+                title = deal_row[0].get("title", "")
+                image = await _fetch_naver_image(title)
+                if image:
+                    sb.table("deals").update({"image_url": image}).eq("id", deal_id).execute()
+
         # 1) 쿠팡/네이버/일반 쇼핑몰 URL — httpx로 페이지 가져와서 가격 파싱 시도
         actual_price = None
         async with httpx.AsyncClient(
