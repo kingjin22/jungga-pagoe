@@ -62,8 +62,8 @@ def get_deals(
     sb = get_supabase()
     query = sb.table("deals").select("*", count="exact")
 
-    # 상태 필터 (EXPIRED 제외)
-    query = query.in_("status", ["active", "price_changed"])
+    # active만 노출 — price_changed는 가격 불일치 상태라 노출 금지
+    query = query.eq("status", "active")
 
     if category:
         query = query.eq("category", category)

@@ -60,10 +60,10 @@ async def _sync_naver():
 
 
 async def _sync_ppomppu():
-    """
-    뽐뿌 핫딜 수집 — 실시간 가격 검증 포함
-    RealtimePriceChecker: 네이버 lprice로 딜 소진 여부 즉시 판단
-    """
+    # ⛔ 영구 비활성화 — Naver lprice 기반 검증으로는 딜 소진 감지 불가
+    # 실제 쇼핑몰 페이지 직접 가격 크롤링 구현 전까지 수집 중단
+    logger.info("⛔ 뽐뿌 sync 비활성화")
+    return
     try:
         import app.db_supabase as db
         from app.services.ppomppu import fetch_ppomppu_deals
@@ -153,7 +153,9 @@ async def _sync_ppomppu():
 
 
 async def _sync_naver_cafe():
-    """정가거부 카페 핫딜 — 실시간 가격 검증 포함"""
+    # ⛔ 영구 비활성화 — 커뮤니티 딜 신뢰성 문제
+    logger.info("⛔ 정가거부 카페 sync 비활성화")
+    return
     try:
         import app.db_supabase as db
         from app.services.naver_cafe import fetch_naver_cafe_deals
