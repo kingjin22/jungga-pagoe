@@ -120,12 +120,12 @@ async def patch_admin_deal(
 async def get_pending_deals(
     x_admin_key: Optional[str] = Header(None),
 ):
-    """제보 대기 딜 목록 (pending + rejected 포함)"""
+    """제보 대기 딜 목록 (pending만 — rejected는 DB enum 없음, expired+[거부] 메모로 대체)"""
     verify_admin(x_admin_key)
     sb = db.get_supabase()
     res = sb.table("deals") \
         .select("*") \
-        .in_("status", ["pending", "rejected"]) \
+        .eq("status", "pending") \
         .order("created_at", desc=True) \
         .limit(100) \
         .execute()
