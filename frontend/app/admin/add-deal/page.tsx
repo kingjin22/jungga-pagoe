@@ -267,6 +267,18 @@ export default function AddDealPage() {
             onBlur={(e) => handleUrlPaste(e.target.value)}
             className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-gray-500"
           />
+          {(form.product_url.toLowerCase().includes("coupang.com") ||
+            form.product_url.toLowerCase().includes("coupa.ng")) &&
+            !form.product_url.toLowerCase().includes("link.coupang.com") && (
+            <p className="mt-1 text-xs text-emerald-600">
+              ✓ 쿠팡 URL 감지 — 등록 시 파트너스 추적 링크로 자동 변환됩니다
+            </p>
+          )}
+          {form.product_url.toLowerCase().includes("link.coupang.com") && (
+            <p className="mt-1 text-xs text-blue-600">
+              ✓ 파트너스 링크 확인됨
+            </p>
+          )}
         </div>
 
         {/* 제목 */}

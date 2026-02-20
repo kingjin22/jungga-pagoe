@@ -318,9 +318,20 @@ async def quick_add_deal(
     else:
         detected_source = body.source
 
+    # 쿠팡 URL → 파트너스 링크 자동 변환 (link.coupang.com이 아닐 때)
+    final_url = body.product_url.strip()
+    if detected_source == "coupang" and "link.coupang.com" not in url:
+        try:
+            from app.services.coupang_partners import generate_affiliate_link
+            affiliate = await generate_affiliate_link(final_url)
+            if affiliate:
+                final_url = affiliate
+        except Exception:
+            pass  # 변환 실패해도 원본 URL 사용
+
     deal_data = {
         "title": body.title.strip(),
-        "product_url": body.product_url.strip(),
+        "product_url": final_url,
         "sale_price": sale,
         "original_price": orig,
         "discount_rate": dr,
@@ -441,3 +452,22 @@ async def get_visitors(
         "summary": result,
         "recent_logs": recent_logs,
     }
+
+
+@router.get("/coupang-link")
+async def get_coupang_affiliate_link(
+    url: str = Query(..., description="쿠팡 상품 URL"),
+    x_admin_key: Optional[str] = Header(None),
+):
+    """쿠팡 URL → 파트너스 추적 링크 변환"""
+    verify_admin(x_admin_key)
+    from app.services.coupang_partners import generate_affiliate_link, is_coupang_url
+    if not is_coupang_url(url):
+        raise HTTPException(status_code=400, detail="쿠팡 URL이 아닙니다")
+    affiliate_url = await generate_affiliate_link(url)
+    if not affiliate_url:
+        raise HTTPException(
+            status_code=503,
+            detail="링크 생성 실패 — 토큰 만료 또는 블랙리스트 상품"
+        )
+    return {"original_url": url, "affiliate_url": affiliate_url}
