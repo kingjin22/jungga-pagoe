@@ -77,9 +77,9 @@ export default function AdminLayout({
                 }`}
               >
                 {item.label}
-                {"badge" in item && item.badge > 0 && (
+                {"badge" in item && (item as {badge?: number}).badge! > 0 && (
                   <span className="bg-[#E31E24] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
-                    {item.badge}
+                    {(item as {badge?: number}).badge}
                   </span>
                 )}
               </Link>
