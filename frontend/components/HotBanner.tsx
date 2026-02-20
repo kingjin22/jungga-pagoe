@@ -15,19 +15,28 @@ export default function HotBanner({ deals }: HotBannerProps) {
       <div className="max-w-screen-xl mx-auto px-4 py-8">
         {/* 섹션 헤더 */}
         <div className="flex items-center justify-between mb-5">
-          <div>
-            <p className="text-[11px] font-semibold text-[#E31E24] tracking-widest uppercase mb-1">
-              Real-time Hot Deal
-            </p>
-            <h2 className="text-xl font-black text-gray-900 tracking-tight">
-              지금 가장 인기 있는 딜
-            </h2>
+          <div className="flex items-center gap-3">
+            <div>
+              <div className="flex items-center gap-2 mb-0.5">
+                {/* 실시간 펄스 인디케이터 */}
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#E31E24] opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-[#E31E24]" />
+                </span>
+                <p className="text-[11px] font-semibold text-[#E31E24] tracking-widest uppercase">
+                  실시간 인기
+                </p>
+              </div>
+              <h2 className="text-xl font-black text-gray-900 tracking-tight">
+                🔥 지금 가장 뜨거운 딜
+              </h2>
+            </div>
           </div>
           <Link
             href="/?hot_only=true"
-            className="text-xs text-gray-500 hover:text-gray-900 underline underline-offset-2 transition-colors"
+            className="text-xs font-medium text-gray-500 hover:text-[#E31E24] transition-colors flex items-center gap-1"
           >
-            전체보기
+            전체보기 <span className="text-gray-300">›</span>
           </Link>
         </div>
 

@@ -140,8 +140,8 @@ export default function DealCard({ deal, onClick }: DealCardProps) {
           </div>
         )}
         {deal.is_hot && deal.status !== "price_changed" && !isFree && (
-          <div className="absolute top-0 right-0 bg-[#111] text-white text-[10px] font-bold px-1.5 py-1 leading-none">
-            HOT
+          <div className="absolute top-0 right-0 bg-[#E31E24] text-white text-[10px] font-black px-2 py-1 leading-none tracking-wider flex items-center gap-0.5">
+            🔥 HOT
           </div>
         )}
 

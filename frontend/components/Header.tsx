@@ -10,7 +10,7 @@ const SOURCE_LINKS = [
   { href: "/?source=coupang", label: "쿠팡" },
   { href: "/?source=naver", label: "네이버" },
   { href: "/?source=community", label: "커뮤니티" },
-  { href: "/?hot_only=true", label: "HOT딜", hot: true },
+  { href: "/?hot_only=true", label: "🔥 HOT딜", hot: true },
 ];
 
 interface HeaderProps {
@@ -104,14 +104,14 @@ export default function Header({ categories = [] }: HeaderProps) {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`shrink-0 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                  className={`shrink-0 px-4 py-3 text-sm border-b-2 transition-colors whitespace-nowrap ${
                     item.hot
                       ? isActive
-                        ? "text-[#E31E24] border-[#E31E24]"
-                        : "text-[#E31E24] border-transparent hover:border-[#E31E24]"
+                        ? "text-[#E31E24] border-[#E31E24] font-black"
+                        : "text-[#E31E24] border-transparent hover:border-[#E31E24] font-bold"
                       : isActive
                       ? "text-gray-900 border-gray-900 font-bold"
-                      : "text-gray-500 border-transparent hover:text-gray-900 hover:border-gray-300"
+                      : "text-gray-500 border-transparent hover:text-gray-900 hover:border-gray-300 font-medium"
                   }`}
                 >
                   {item.label}
