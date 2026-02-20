@@ -9,6 +9,7 @@ import { DealGridSkeleton } from "@/components/DealSkeleton";
 import PageViewTracker from "@/components/PageViewTracker";
 import AdBanner from "@/components/AdBanner";
 import Link from "next/link";
+import CoupangBanner from "@/components/CoupangBanner";
 
 interface SearchParams {
   page?: string;
@@ -124,6 +125,9 @@ export default async function HomePage({
           </Suspense>
           </>
         )}
+
+        {/* 쿠팡 파트너스 배너 */}
+        <CoupangBanner />
 
         {/* 페이지네이션 */}
         {dealsData.pages > 1 && (
