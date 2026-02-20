@@ -56,8 +56,11 @@ async def _sync_naver():
 
 
 async def _sync_ppomppu():
-    # product_url = 네이버 카탈로그 URL 우선 → 클릭 시 실시간 최저가
-    # original_price = 네이버 hprice(정가) 기준 → 정확한 할인율
+    # ⛔ 커뮤니티 딜 수집 중단 — 네이버 키워드 검색 기반 가격 매칭 신뢰도 부족
+    # 식품/일상용품은 키워드 매칭 오류로 hprice가 완전히 다른 제품 기준이 됨
+    # TODO: 브랜드명+모델명 정확히 파싱 가능한 카테고리(전자기기/패션)만 선별 수집
+    logger.info("⛔ 뽐뿌 sync 중단 — 가격 신뢰성 재설계 필요")
+    return
     try:
         import app.db_supabase as db
         from app.services.ppomppu import fetch_ppomppu_deals
@@ -137,8 +140,9 @@ async def _sync_ppomppu():
 
 
 async def _sync_naver_cafe():
-    # product_url = 네이버 카탈로그 URL (카페 URL ❌) → 실시간 가격 검증 가능
-    # original_price = 네이버 hprice(정가) 기준 → 정확한 할인율
+    # ⛔ 커뮤니티 딜 수집 중단 — 식품/일상용품 키워드 매칭 신뢰도 부족
+    logger.info("⛔ 정가거부 카페 sync 중단")
+    return
     try:
         import app.db_supabase as db
         from app.services.naver_cafe import fetch_naver_cafe_deals
