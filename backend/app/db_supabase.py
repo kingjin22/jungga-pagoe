@@ -171,6 +171,32 @@ def deal_url_exists(product_url: str) -> bool:
     return (res.count or 0) > 0
 
 
+def deal_duplicate_exists(title: str, sale_price: float, tolerance: float = 0.03) -> bool:
+    """제목 + 가격 기준 중복 체크 (URL이 달라도 같은 제품 방지)
+    
+    같은 제목의 active 딜이 있고, 가격 차이가 tolerance(3%) 이내면 중복으로 판단.
+    gmarket/쿠팡 등에서 동일 제품을 다른 URL로 수집하는 경우 방지.
+    """
+    sb = get_supabase()
+    res = (
+        sb.table("deals")
+        .select("id, sale_price")
+        .eq("title", title)
+        .in_("status", ["active", "price_changed"])
+        .execute()
+    )
+    if not res.data:
+        return False
+    for existing in res.data:
+        existing_price = float(existing.get("sale_price") or 0)
+        if existing_price <= 0:
+            continue
+        price_diff = abs(existing_price - sale_price) / existing_price
+        if price_diff <= tolerance:
+            return True  # 중복
+    return False
+
+
 def expire_deal(deal_id: int) -> dict:
     sb = get_supabase()
     res = (

@@ -37,6 +37,10 @@ async def _sync_naver():
                 logger.debug(f"[네이버skip] {v.reason}")
                 skipped += 1
                 continue
+            # 제목+가격 중복 체크 (URL 달라도 동일 제품 방지)
+            if db.deal_duplicate_exists(item["title"], v.sale_price):
+                skipped += 1
+                continue
             db.create_deal({
                 "title": item["title"],
                 "original_price": v.original_price,
@@ -244,6 +248,10 @@ async def _sync_brand_deals():
             v = validator.validate_sync(item)
             if not v:
                 logger.debug(f"[브랜드skip] {v.reason}")
+                skipped += 1
+                continue
+            # 제목+가격 중복 체크
+            if db.deal_duplicate_exists(item["title"], v.sale_price):
                 skipped += 1
                 continue
             db.create_deal({
