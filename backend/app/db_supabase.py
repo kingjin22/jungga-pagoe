@@ -469,9 +469,13 @@ def get_admin_deals(
 
 
 def update_deal_admin(deal_id: int, data: Dict[str, Any]) -> Optional[dict]:
-    """관리자 필드 업데이트 (status, pinned, admin_note, expires_at 등)"""
+    """관리자 필드 업데이트"""
     sb = get_supabase()
-    allowed = {"status", "pinned", "admin_note", "expires_at", "is_hot", "title"}
+    allowed = {
+        "status", "pinned", "admin_note", "expires_at", "is_hot",
+        "title", "image_url", "category", "sale_price", "original_price",
+        "discount_rate", "product_url", "description",
+    }
     patch = {k: v for k, v in data.items() if k in allowed and v is not None}
     if not patch:
         return None
