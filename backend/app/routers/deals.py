@@ -284,15 +284,15 @@ async def _verify_submitted_deal(deal_id: int, product_url: str, submitted_price
         sb.table("deals").update({"admin_note": note, "status": status}).eq("id", deal_id).execute()
 
     try:
-        # 0) 이미지 자동 주입 (없는 경우)
-        deal_row = sb.table("deals").select("title, image_url").eq("id", deal_id).limit(1).execute().data
-        if deal_row:
-            existing_image = deal_row[0].get("image_url") or ""
-            if not existing_image:
-                title = deal_row[0].get("title", "")
-                image = await _fetch_naver_image(title)
-                if image:
-                    sb.table("deals").update({"image_url": image}).eq("id", deal_id).execute()
+        # 0) 이미지 자동 주입 (없는 경우) + 이미 만료된 딜 스킵
+        deal_row = sb.table("deals").select("title, image_url, status").eq("id", deal_id).limit(1).execute().data
+        if deal_row and deal_row[0].get("status") in ("expired", "rejected"):
+            return  # 이미 만료/거부된 딜 → 검증 스킵
+        if deal_row and not (deal_row[0].get("image_url") or ""):
+            title = deal_row[0].get("title", "")
+            image = await _fetch_naver_image(title)
+            if image:
+                sb.table("deals").update({"image_url": image}).eq("id", deal_id).execute()
 
         # 1) 쿠팡/네이버/일반 쇼핑몰 URL — httpx로 페이지 가져와서 가격 파싱 시도
         actual_price = None
