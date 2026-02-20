@@ -424,6 +424,14 @@ async def _run_kream_sync():
 
 def start_scheduler():
     """스케줄러 시작"""
+    # 철칙 위반 딜 자동 만료 (5분마다)
+    scheduler.add_job(
+        _cleanup_invalid_deals,
+        trigger=IntervalTrigger(minutes=5),
+        id="cleanup_invalid",
+        max_instances=1,
+    )
+
     scheduler.add_job(
         _sync_coupang,
         trigger=IntervalTrigger(minutes=10),
@@ -504,3 +512,43 @@ def stop_scheduler():
     if scheduler.running:
         scheduler.shutdown()
         logger.info("🛑 스케줄러 종료")
+
+
+async def _cleanup_invalid_deals():
+    """5분마다: 할인율 0% or 식품/일상용품 커뮤니티 딜 자동 만료"""
+    try:
+        import app.db_supabase as db
+        sb = db.get_supabase()
+
+        # 1) 할인율 0% active 딜 (source 무관)
+        res = sb.table("deals").select("id,title,discount_rate,category,source") \
+            .eq("status", "active") \
+            .eq("discount_rate", 0) \
+            .execute()
+        for d in (res.data or []):
+            # 무료딜(sale_price=0)은 예외
+            sale_res = sb.table("deals").select("sale_price").eq("id", d["id"]).limit(1).execute()
+            sale = float((sale_res.data or [{}])[0].get("sale_price", 1) or 1)
+            if sale > 0:  # 유료딜인데 할인율 0 → 만료
+                sb.table("deals").update({
+                    "status": "expired",
+                    "admin_note": "[자동만료] 할인율 0%"
+                }).eq("id", d["id"]).execute()
+                logger.info(f"🗑 자동만료(0%): #{d['id']} {d['title'][:35]}")
+
+        # 2) 식품/일상용품 커뮤니티 딜
+        BLOCKED_CATS = ["식품", "유아동"]
+        res2 = sb.table("deals").select("id,title,category,source") \
+            .eq("status", "active") \
+            .eq("source", "community") \
+            .in_("category", BLOCKED_CATS) \
+            .execute()
+        for d in (res2.data or []):
+            sb.table("deals").update({
+                "status": "expired",
+                "admin_note": f"[자동만료] 식품/유아동 커뮤니티 딜 철칙위반"
+            }).eq("id", d["id"]).execute()
+            logger.info(f"🗑 자동만료(식품): #{d['id']} {d['title'][:35]}")
+
+    except Exception as e:
+        logger.error(f"❌ cleanup_invalid_deals 오류: {e}")
