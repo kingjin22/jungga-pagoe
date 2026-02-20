@@ -61,12 +61,19 @@ class EventPayload(BaseModel):
 @app.post("/api/events")
 async def track_event(payload: EventPayload, request: Request):
     user_agent = request.headers.get("user-agent")
+    # Railway는 X-Forwarded-For로 실제 IP 전달
+    ip = (
+        request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+        or request.headers.get("x-real-ip")
+        or (request.client.host if request.client else None)
+    )
     db.log_event(
         event_type=payload.event_type,
         deal_id=payload.deal_id,
         session_id=payload.session_id,
         referrer=payload.referrer,
         user_agent=user_agent,
+        ip_address=ip,
     )
     return {"ok": True}
 

@@ -345,3 +345,99 @@ async def quick_add_deal(
         return deal
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/visitors")
+async def get_visitors(
+    x_admin_key: Optional[str] = Header(None),
+    days: int = Query(7, ge=1, le=30),
+):
+    """IP별 방문·클릭 통계 — 최근 N일"""
+    verify_admin(x_admin_key)
+    sb = db.get_supabase()
+    from datetime import datetime, timedelta, timezone
+
+    since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+
+    res = sb.table("event_logs") \
+        .select("ip_address,event_type,deal_id,session_id,user_agent,created_at") \
+        .gte("created_at", since) \
+        .not_.is_("ip_address", "null") \
+        .order("created_at", desc=True) \
+        .limit(5000) \
+        .execute()
+
+    rows = res.data or []
+
+    # IP별 집계
+    from collections import defaultdict
+    ip_stats: dict = defaultdict(lambda: {
+        "ip": "",
+        "visits": 0,
+        "clicks": 0,
+        "deal_opens": 0,
+        "last_seen": "",
+        "first_seen": "",
+        "user_agent": "",
+        "sessions": set(),
+        "deals_clicked": set(),
+    })
+
+    for r in rows:
+        ip = r.get("ip_address") or "unknown"
+        et = r.get("event_type", "")
+        s = ip_stats[ip]
+        s["ip"] = ip
+        s["user_agent"] = r.get("user_agent") or s["user_agent"]
+        ts = r.get("created_at", "")
+        if not s["last_seen"] or ts > s["last_seen"]:
+            s["last_seen"] = ts
+        if not s["first_seen"] or ts < s["first_seen"]:
+            s["first_seen"] = ts
+        if r.get("session_id"):
+            s["sessions"].add(r["session_id"])
+        if et == "impression":
+            s["visits"] += 1
+        elif et == "outbound_click":
+            s["clicks"] += 1
+            if r.get("deal_id"):
+                s["deals_clicked"].add(r["deal_id"])
+        elif et == "deal_open":
+            s["deal_opens"] += 1
+
+    # 직렬화
+    result = []
+    for ip, s in ip_stats.items():
+        ua = s["user_agent"] or ""
+        device = "모바일" if "Mobile" in ua else ("봇" if "bot" in ua.lower() else "PC")
+        result.append({
+            "ip": ip,
+            "visits": s["visits"],
+            "deal_opens": s["deal_opens"],
+            "clicks": s["clicks"],
+            "sessions": len(s["sessions"]),
+            "deals_clicked": len(s["deals_clicked"]),
+            "device": device,
+            "first_seen": s["first_seen"],
+            "last_seen": s["last_seen"],
+            "user_agent": ua[:120],
+        })
+
+    # 최근 방문순 정렬
+    result.sort(key=lambda x: x["last_seen"], reverse=True)
+
+    # 최근 이벤트 로그 (상세)
+    recent_logs = [{
+        "ip": r.get("ip_address"),
+        "event": r.get("event_type"),
+        "deal_id": r.get("deal_id"),
+        "time": r.get("created_at"),
+        "device": "모바일" if "Mobile" in (r.get("user_agent") or "") else "PC",
+    } for r in rows[:100]]
+
+    return {
+        "period_days": days,
+        "total_ips": len(result),
+        "summary": result,
+        "recent_logs": recent_logs,
+    }

@@ -315,6 +315,7 @@ def log_event(
     session_id: Optional[str] = None,
     referrer: Optional[str] = None,
     user_agent: Optional[str] = None,
+    ip_address: Optional[str] = None,
 ) -> None:
     """event_logs 테이블에 이벤트 INSERT"""
     sb = get_supabase()
@@ -325,6 +326,7 @@ def log_event(
             "session_id": session_id,
             "referrer": referrer,
             "user_agent": user_agent,
+            "ip_address": ip_address,
         }).execute()
     except Exception:
         pass  # 이벤트 로깅 실패는 무시
