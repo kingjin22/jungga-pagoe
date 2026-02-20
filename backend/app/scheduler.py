@@ -60,83 +60,92 @@ async def _sync_naver():
 
 
 async def _sync_ppomppu():
-    # ⛔ 커뮤니티 딜 수집 중단 — 네이버 키워드 검색 기반 가격 매칭 신뢰도 부족
-    # 식품/일상용품은 키워드 매칭 오류로 hprice가 완전히 다른 제품 기준이 됨
-    # TODO: 브랜드명+모델명 정확히 파싱 가능한 카테고리(전자기기/패션)만 선별 수집
-    logger.info("⛔ 뽐뿌 sync 중단 — 가격 신뢰성 재설계 필요")
-    return
+    """
+    뽐뿌 핫딜 수집 — 실시간 가격 검증 포함
+    RealtimePriceChecker: 네이버 lprice로 딜 소진 여부 즉시 판단
+    """
     try:
         import app.db_supabase as db
         from app.services.ppomppu import fetch_ppomppu_deals
-        from app.services.naver import search_product
-        from app.services.deal_validator import validator
+        from app.services.price_scrapers import check_community_deal_price
+        from app.config import settings
 
         deals_data = await fetch_ppomppu_deals()
         created = skipped = 0
 
-        for item in deals_data:
-            sale = item.get("sale_price", 0)
-            is_free = sale == 0
+        async with __import__("httpx").AsyncClient(timeout=8) as client:
+            for item in deals_data:
+                sale = float(item.get("sale_price") or 0)
+                is_free = sale == 0
 
-            # 품질 기준: 이미지 + 실제 쇼핑몰 URL (무료 제외)
-            if not is_free:
-                has_image = bool(item.get("image_url"))
-                has_real_url = bool(item.get("product_url") and "ppomppu.co.kr" not in item["product_url"])
-                if not (has_image and has_real_url):
+                # 품질 기준: 이미지 + 실제 쇼핑몰 URL (무료 제외)
+                if not is_free:
+                    has_image = bool(item.get("image_url"))
+                    has_real_url = bool(item.get("product_url") and "ppomppu.co.kr" not in item["product_url"])
+                    if not (has_image and has_real_url):
+                        skipped += 1
+                        continue
+
+                if db.deal_url_exists(item["product_url"]):
+                    continue
+
+                if is_free:
+                    # 무료딜은 검증 없이 저장
+                    db.create_deal({
+                        "title": item["title"],
+                        "original_price": 0,
+                        "sale_price": 0,
+                        "discount_rate": 100,
+                        "image_url": item.get("image_url"),
+                        "product_url": item["product_url"],
+                        "source": "community",
+                        "category": item.get("category", "기타"),
+                        "status": "active",
+                        "is_hot": False,
+                        "submitter_name": item.get("submitter_name", "뽐뿌"),
+                    })
+                    created += 1
+                    continue
+
+                # ── 실시간 가격 유효성 검증 ──────────────────────
+                price_check = await check_community_deal_price(
+                    title=item["title"],
+                    community_price=sale,
+                    naver_client_id=settings.NAVER_CLIENT_ID,
+                    naver_client_secret=settings.NAVER_CLIENT_SECRET,
+                    client=client,
+                )
+                if not price_check:
+                    logger.debug(f"[뽐뿌skip] {price_check.reason} | {item['title'][:40]}")
                     skipped += 1
                     continue
 
-            if db.deal_url_exists(item["product_url"]):
-                continue
+                # 중복 체크 (네이버 카탈로그 URL 기준)
+                final_url = price_check.naver_product_url or item["product_url"]
+                if db.deal_url_exists(final_url):
+                    skipped += 1
+                    continue
+                if db.deal_duplicate_exists(item["title"], price_check.community_price):
+                    skipped += 1
+                    continue
 
-            # 네이버 시세 조회 (무료딜 제외)
-            naver_data = None
-            if not is_free:
-                try:
-                    naver_data = await search_product(item["title"])
-                except Exception as e:
-                    logger.warning(f"네이버 조회 실패 [{item['title'][:30]}]: {e}")
-
-            # DealValidator 통과 여부
-            v = await validator.validate(item, naver_data=naver_data)
-            if not v:
-                logger.debug(f"[뽐뿌skip] {v.reason}")
-                skipped += 1
-                continue
-
-            if v.warnings:
-                for w in v.warnings:
-                    logger.info(f"  ⚠️ {w}")
-
-            # product_url = 네이버 카탈로그 URL 우선 (실시간 최저가 표시)
-            # 없으면 원본 쇼핑몰 URL 사용
-            naver_catalog_url = naver_data.get("product_url") if naver_data else None
-            final_url = naver_catalog_url or item["product_url"]
-            if not final_url:
-                skipped += 1
-                continue
-
-            # 중복 체크는 최종 URL 기준
-            if db.deal_url_exists(final_url):
-                skipped += 1
-                continue
-
-            db.create_deal({
-                "title": item["title"],
-                "description": item.get("description"),
-                "original_price": v.original_price,
-                "sale_price": v.sale_price,
-                "discount_rate": v.discount_rate,
-                "image_url": item.get("image_url") or (naver_data.get("image_url") if naver_data else None),
-                "product_url": final_url,
-                "source": "community",
-                "category": item.get("category", "기타"),
-                "status": "active",
-                "is_hot": v.is_hot,
-                "submitter_name": item.get("submitter_name", "뽐뿌"),
-                "admin_note": "네이버 카탈로그 + 시세 검증" if naver_catalog_url else "뽐뿌 직링크",
-            })
-            created += 1
+                db.create_deal({
+                    "title": item["title"],
+                    "description": item.get("description"),
+                    "original_price": price_check.naver_hprice or price_check.naver_lprice,
+                    "sale_price": price_check.community_price,
+                    "discount_rate": price_check.discount_vs_hprice,
+                    "image_url": item.get("image_url") or price_check.image_url,
+                    "product_url": final_url,
+                    "source": "community",
+                    "category": item.get("category", "기타"),
+                    "status": "active",
+                    "is_hot": price_check.discount_vs_hprice >= 20,
+                    "submitter_name": item.get("submitter_name", "뽐뿌"),
+                    "admin_note": f"실시간 검증: lprice={price_check.naver_lprice:,.0f}원",
+                })
+                logger.info(f"  ✅ 저장: {item['title'][:40]} | -{price_check.discount_vs_hprice}%")
+                created += 1
 
         logger.info(f"✅ 뽐뿌 sync: {created}개 저장 | {skipped}개 제외")
     except Exception as e:
@@ -144,9 +153,7 @@ async def _sync_ppomppu():
 
 
 async def _sync_naver_cafe():
-    # ⛔ 커뮤니티 딜 수집 중단 — 식품/일상용품 키워드 매칭 신뢰도 부족
-    logger.info("⛔ 정가거부 카페 sync 중단")
-    return
+    """정가거부 카페 핫딜 — 실시간 가격 검증 포함"""
     try:
         import app.db_supabase as db
         from app.services.naver_cafe import fetch_naver_cafe_deals
@@ -154,36 +161,49 @@ async def _sync_naver_cafe():
         deals_data = await fetch_naver_cafe_deals()
         created = skipped = 0
 
-        from app.services.deal_validator import validator
-        for item in deals_data:
-            if db.deal_url_exists(item["product_url"]):
-                skipped += 1
-                continue
+        from app.services.price_scrapers import check_community_deal_price
+        from app.config import settings
 
-            v = validator.validate_sync(item)   # naver_cafe는 이미 내부에서 네이버 검증 완료
-            if not v:
-                logger.debug(f"[카페skip] {v.reason}")
-                skipped += 1
-                continue
+        async with __import__("httpx").AsyncClient(timeout=8) as client:
+            for item in deals_data:
+                if db.deal_url_exists(item.get("product_url", "")):
+                    skipped += 1
+                    continue
+                if db.deal_duplicate_exists(item["title"], item.get("sale_price", 0)):
+                    skipped += 1
+                    continue
 
-            db.create_deal({
-                "title": item["title"],
-                "description": item.get("description"),
-                "original_price": v.original_price,
-                "sale_price": v.sale_price,
-                "discount_rate": v.discount_rate,
-                "image_url": item.get("image_url"),
-                "product_url": item["product_url"],
-                "source": "community",
-                "category": item.get("category", "기타"),
-                "status": "active",
-                "is_hot": v.is_hot,
-                "submitter_name": item.get("submitter_name", "정가거부"),
-                "admin_note": "정가거부 카페 + 네이버 시세 검증",
-            })
-            created += 1
+                # naver_cafe는 이미 naver 검색 완료 → 딜 소진 여부만 재확인
+                price_check = await check_community_deal_price(
+                    title=item["title"],
+                    community_price=float(item.get("sale_price") or 0),
+                    naver_client_id=settings.NAVER_CLIENT_ID,
+                    naver_client_secret=settings.NAVER_CLIENT_SECRET,
+                    client=client,
+                )
+                if not price_check:
+                    logger.debug(f"[카페skip] {price_check.reason} | {item['title'][:40]}")
+                    skipped += 1
+                    continue
 
-        logger.info(f"✅ 정가거부 카페: {created}개 신규 | {skipped}개 중복 스킵")
+                db.create_deal({
+                    "title": item["title"],
+                    "description": item.get("description"),
+                    "original_price": price_check.naver_hprice or price_check.naver_lprice,
+                    "sale_price": price_check.community_price,
+                    "discount_rate": price_check.discount_vs_hprice,
+                    "image_url": item.get("image_url") or price_check.image_url,
+                    "product_url": price_check.naver_product_url or item.get("product_url"),
+                    "source": "community",
+                    "category": item.get("category", "기타"),
+                    "status": "active",
+                    "is_hot": price_check.discount_vs_hprice >= 20,
+                    "submitter_name": item.get("submitter_name", "정가거부"),
+                    "admin_note": f"실시간 검증: lprice={price_check.naver_lprice:,.0f}원",
+                })
+                created += 1
+
+        logger.info(f"✅ 정가거부 카페: {created}개 신규 | {skipped}개 스킵")
     except Exception as e:
         logger.error(f"❌ 정가거부 카페 sync: {e}")
 
@@ -197,9 +217,27 @@ async def _verify_prices():
         cutoff = (datetime.utcnow() - timedelta(minutes=55)).isoformat()
         deals = db.get_deals_for_verify(cutoff)
         logger.info(f"  검증 대상: {len(deals)}개")
+        from app.services.price_scrapers import RealtimePriceChecker
+        from app.config import settings
+        rt_checker = RealtimePriceChecker(settings.NAVER_CLIENT_ID, settings.NAVER_CLIENT_SECRET)
+
         ok = changed = expired_count = 0
-        for deal in deals:
+        async with __import__("httpx").AsyncClient(timeout=8) as hclient:
+          for deal in deals:
             try:
+                # 커뮤니티 딜: 핫딜 소진 여부 실시간 재확인
+                if deal.get("source") == "community" and deal.get("sale_price"):
+                    rt = await rt_checker.recheck_existing(
+                        title=deal["title"],
+                        stored_sale_price=float(deal["sale_price"]),
+                        client=hclient,
+                    )
+                    if rt["action"] == "expired":
+                        logger.info(f"  🛑 커뮤니티 딜 소진: {deal['title'][:40]} | {rt['reason']}")
+                        db.update_deal_verify(deal["id"], {"status": "expired", "verify_fail_count": 0})
+                        expired_count += 1
+                        continue
+
                 check = await verify_deal(deal)
                 patch = {"last_verified_at": check["last_verified_at"].isoformat()}
                 if check["verified_price"] is not None:
