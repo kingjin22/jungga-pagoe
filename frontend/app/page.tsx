@@ -102,7 +102,7 @@ export default async function HomePage({
         {/* 섹션 헤더 */}
         <div className="flex items-center justify-between mb-2">
           <h2 className="text-lg font-black text-gray-900">
-            {params.hot_only === "true" ? "HOT 딜" : isFiltered ? "검색 결과" : "전체 딜"}
+            {params.hot_only === "true" ? "HOT딜" : isFiltered ? "검색 결과" : "전체 딜"}
           </h2>
         </div>
 

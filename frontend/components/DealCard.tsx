@@ -130,7 +130,7 @@ export default function DealCard({ deal, onClick }: DealCardProps) {
           </div>
         ) : deal.is_hot ? (
           <div className="absolute top-0 left-0 bg-[#E31E24] text-white text-[11px] font-bold px-2.5 py-1.5 leading-none tracking-wide">
-            핫딜
+            HOT딜
           </div>
         ) : deal.discount_rate > 0 ? (
           <div className="absolute top-0 left-0 bg-[#E31E24] text-white text-[11px] font-bold px-2.5 py-1.5 leading-none">
