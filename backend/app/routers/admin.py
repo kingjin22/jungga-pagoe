@@ -91,6 +91,9 @@ class DealAdminPatch(BaseModel):
     admin_note: Optional[str] = None
     expires_at: Optional[str] = None
     is_hot: Optional[bool] = None
+    category: Optional[str] = None
+    sale_price: Optional[int] = None
+    original_price: Optional[int] = None
 
 
 @router.patch("/deals/{deal_id}")
