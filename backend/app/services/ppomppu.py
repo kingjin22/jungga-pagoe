@@ -271,6 +271,7 @@ async def fetch_ppomppu_deals() -> list[dict]:
                 "discount_rate": dr,
                 "image_url": nav.get("image_url"),
                 "product_url": nav.get("product_url") or deal["ppomppu_url"],
+                "ppomppu_url": deal["ppomppu_url"],  # 실제 쇼핑몰 URL 추출용
                 "category": nav.get("naver_category") or deal["category"],
                 "source": "community",
                 "submitter_name": deal["retailer"] or "뽐뿌",

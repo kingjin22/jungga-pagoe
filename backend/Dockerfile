@@ -8,11 +8,17 @@ RUN apt-get update && apt-get install -y \
     libxml2-dev \
     libxslt-dev \
     libpq-dev \
+    wget \
+    gnupg \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 # 의존성 설치
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Playwright chromium 설치 (커뮤니티 딜 실시간 가격 크롤링용)
+RUN python -m playwright install chromium --with-deps
 
 # 소스 복사
 COPY . .
