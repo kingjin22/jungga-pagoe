@@ -399,6 +399,24 @@ async def _collect_price_snapshots():
         logger.error(f"[스냅샷] 오류: {e}")
 
 
+async def _run_watchlist_monitor():
+    """인기 제품 워치리스트 가격 모니터링 — 30분마다"""
+    try:
+        from app.services.watchlist_monitor import run_watchlist_monitor
+        await run_watchlist_monitor()
+    except Exception as e:
+        logger.error(f"❌ 워치리스트 모니터 오류: {e}")
+
+
+async def _run_kream_sync():
+    """KREAM 트렌딩 → 워치리스트 갱신 — 주 1회"""
+    try:
+        from app.services.watchlist_monitor import run_kream_sync
+        await run_kream_sync()
+    except Exception as e:
+        logger.error(f"❌ KREAM 동기화 오류: {e}")
+
+
 def start_scheduler():
     """스케줄러 시작"""
     scheduler.add_job(
@@ -457,8 +475,22 @@ def start_scheduler():
         name="일일 가격 스냅샷 (브랜드딜 42종)",
         replace_existing=True,
     )
+    scheduler.add_job(
+        _run_watchlist_monitor,
+        trigger=IntervalTrigger(minutes=30),
+        id="watchlist_monitor",
+        name="인기 제품 워치리스트 가격 모니터링 (30분)",
+        replace_existing=True,
+    )
+    scheduler.add_job(
+        _run_kream_sync,
+        trigger=IntervalTrigger(weeks=1),
+        id="kream_sync",
+        name="KREAM 트렌딩 워치리스트 갱신 (주 1회)",
+        replace_existing=True,
+    )
     scheduler.start()
-    msg = "🕐 스케줄러 시작: 쿠팡(30분) / 네이버(1h) / 뽐뿌(30분) / 가격검증(1h) / 만료처리(6h)"
+    msg = "🕐 스케줄러 시작: 워치리스트(30분) / 쿠팡(30분) / 네이버(1h) / 뽐뿌(30분) / 가격검증(1h) / 만료처리(6h)"
     logger.info(msg)
     print(msg, flush=True)  # uvicorn stdout에도 출력
 
