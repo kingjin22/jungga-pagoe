@@ -18,8 +18,9 @@ _token_cache: dict = {}  # {"token": str, "cookie": str}
 async def _fetch_token_from_db() -> tuple[str, str]:
     """Supabase site_settings에서 토큰 조회"""
     try:
-        from app.db_supabase import supabase
-        rows = supabase.table("site_settings").select("key,value").in_(
+        from app.db_supabase import get_supabase
+        sb = get_supabase()
+        rows = sb.table("site_settings").select("key,value").in_(
             "key", ["coupang_partners_token", "coupang_partners_cookie"]
         ).execute()
         data = {r["key"]: r["value"] for r in (rows.data or [])}
@@ -53,8 +54,9 @@ async def get_credentials() -> tuple[str, str]:
 async def update_token(token: str, cookie: str = "") -> bool:
     """Supabase에 토큰 업데이트 + 캐시 초기화"""
     try:
-        from app.db_supabase import supabase
-        supabase.table("site_settings").upsert([
+        from app.db_supabase import get_supabase
+        sb = get_supabase()
+        sb.table("site_settings").upsert([
             {"key": "coupang_partners_token", "value": token},
             {"key": "coupang_partners_cookie", "value": cookie},
         ]).execute()
