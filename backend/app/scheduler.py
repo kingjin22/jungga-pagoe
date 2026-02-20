@@ -1,6 +1,6 @@
 """
 APScheduler 백그라운드 자동 작업
-- 매 30분  : 쿠팡 딜 sync
+- 매 10분  : 쿠팡 딜 sync + 가격 검증
 - 매 1시간 : 네이버 딜 sync
 - 매 1시간 : 가격 검증 (등록된 딜 현재 가격 체크 → 가격 오르면 자동 비활성)
 """
@@ -216,7 +216,7 @@ async def _verify_prices():
         import app.db_supabase as db
         from app.services.price_checker import verify_deal, MAX_FAIL_COUNT
         from datetime import datetime, timedelta
-        cutoff = (datetime.utcnow() - timedelta(minutes=55)).isoformat()
+        cutoff = (datetime.utcnow() - timedelta(minutes=8)).isoformat()
         deals = db.get_deals_for_verify(cutoff)
         logger.info(f"  검증 대상: {len(deals)}개")
         from app.services.price_scrapers import RealtimePriceChecker
@@ -343,37 +343,37 @@ def start_scheduler():
     """스케줄러 시작"""
     scheduler.add_job(
         _sync_coupang,
-        trigger=IntervalTrigger(minutes=30),
+        trigger=IntervalTrigger(minutes=10),
         id="sync_coupang",
         name="쿠팡 딜 자동 동기화",
         replace_existing=True,
     )
     scheduler.add_job(
         _sync_naver,
-        trigger=IntervalTrigger(hours=1),
+        trigger=IntervalTrigger(minutes=30),
         id="sync_naver",
         name="네이버 딜 자동 동기화",
         replace_existing=True,
     )
     scheduler.add_job(
         _sync_ppomppu,
-        trigger=IntervalTrigger(minutes=30),
+        trigger=IntervalTrigger(minutes=10),
         id="sync_ppomppu",
-        name="뽐뿌 핫딜 자동 동기화",
+        name="뽐뿌 핫딜 자동 동기화 (비활성)",
         replace_existing=True,
     )
     scheduler.add_job(
         _sync_naver_cafe,
-        trigger=IntervalTrigger(minutes=30),
+        trigger=IntervalTrigger(minutes=10),
         id="sync_naver_cafe",
-        name="정가거부 카페 핫딜 수집 (30분)",
+        name="정가거부 카페 핫딜 수집 (비활성)",
         replace_existing=True,
     )
     scheduler.add_job(
         _verify_prices,
-        trigger=IntervalTrigger(minutes=30),
+        trigger=IntervalTrigger(minutes=10),
         id="verify_prices",
-        name="가격 검증 (30분마다)",
+        name="가격 검증 (10분마다)",
         replace_existing=True,
     )
     scheduler.add_job(
