@@ -33,7 +33,7 @@ export default async function HomePage({
     getDeals({
       page,
       size: 20,
-      sort: params.sort || "discount",
+      sort: params.sort || "latest",
       category: params.category,
       source: params.source,
       search: params.search,
