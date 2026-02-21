@@ -47,11 +47,19 @@ FOOD_TITLE_KEYWORDS = [
     "쉐이크", "프로틴", "두유", "요거트",
     # 기타 식품 추가
     "오트밀", "그래놀라", "시리얼", "젤리빈", "하리보", "포켓몬빵",
+    # 달걀/계란류
+    "특란", "왕란", "신선란", "유정란", "무항생제",
+    # 밀키트/간편조리
+    "밀키트", "간편식", "헬로키트", "오늘뭐먹", "쿠캣",
+    # 한우/육류
+    "한우", "와규", "샤브샤브", "전골", "대창", "곱창",
+    # 치아위생 (치약/구강청결제)
+    "칫솔모", "구강청결", "가글",
     # 아이스크림/빙과
     "아이스크림", "아이스바", "빙과", "설빙", "젤라또", "샤베트",
     "벤앤제리스", "하겐다즈", "배스킨", "나뚜루",
     # 건어물/수산물
-    "진미채", "오징어채", "쥐포", "건오징어", "황태채", "코다리채",
+    "닭발", "족발", "순살", "진미채", "오징어채", "쥐포", "건오징어", "황태채", "코다리채",
     "어포", "전어", "한치", "갈치", "조기", "삼치",
     # 한약재/과실차
     "오미자", "모과", "유자", "레몬", "생강", "당귀", "감초",
@@ -135,7 +143,7 @@ async def lookup_msrp_from_naver(title: str, sale_price: int) -> Optional[dict]:
         return None
 
     query = urllib.parse.quote(clean)
-    url = f"https://openapi.naver.com/v1/search/shop.json?query={query}&display=10&sort=rel"
+    url = f"https://openapi.naver.com/v1/search/shop.json?query={query}&display=10&sort=sim"
 
     try:
         async with httpx.AsyncClient(timeout=8) as client:

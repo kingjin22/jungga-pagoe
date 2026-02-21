@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 ALGUMON_API = "https://www.algumon.com/api/posts"
 
 # 수집 대상 사이트명 (알구몬 siteName 값)
-TARGET_SITES = {"뽐뿌", "루리웹", "어미새", "아카라이브", "클리앙"}
+TARGET_SITES = {"뽐뿌", "루리웹", "어미새", "아카라이브", "클리앙", "퀘이사존"}
 
 # 해외 쇼핑몰 차단 (storeName 기준)
 OVERSEAS_STORES = {

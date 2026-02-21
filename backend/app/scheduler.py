@@ -104,7 +104,8 @@ async def _sync_ppomppu():
             for item in deals_data:
                 sale = float(item.get("sale_price") or 0)
                 is_free = sale == 0
-                ppomppu_url = item.get("ppomppu_url", "")
+                # fetch_ppomppu_deals()는 "source_post_url" 키로 뽐뿌 URL 반환
+                ppomppu_url = item.get("source_post_url") or item.get("ppomppu_url") or ""
 
                 # 이미 수집된 포스트 스킵
                 if ppomppu_url and db.deal_url_exists(ppomppu_url):
