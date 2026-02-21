@@ -218,19 +218,18 @@ def deal_duplicate_exists(title: str, sale_price: float, tolerance: float = 0.03
 
 
 def get_community_deals_for_expiry_check(hours_since_created: int = 1) -> list[dict]:
-    """source_post_url이 있는 활성 커뮤니티 딜 목록 (만료 감지 대상)"""
+    """source_post_url이 있는 모든 활성 딜 목록 (원글 만료 감지 대상 — 소스 무관)"""
     import datetime
     cutoff = (datetime.datetime.utcnow() - datetime.timedelta(hours=hours_since_created)).isoformat()
     sb = get_supabase()
     res = (
         sb.table("deals")
         .select("id, title, source_post_url, created_at, source")
-        .eq("source", "community")
         .eq("status", "active")
         .not_.is_("source_post_url", "null")
         .lt("created_at", cutoff)
         .order("created_at", desc=False)
-        .limit(100)
+        .limit(200)
         .execute()
     )
     return res.data or []

@@ -457,18 +457,18 @@ async def _sync_algumon():
 
 
 async def _check_community_deal_expiry():
-    """커뮤니티 딜 원글 만료 감지 → 자동 expired 처리"""
+    """모든 딜 원글 만료 감지 → 자동 expired 처리 (source 무관, source_post_url 있는 것 전체)"""
     try:
         import app.db_supabase as db
         from app.services.community_enricher import check_deal_expired_from_url
         import asyncio
 
-        # 등록 후 1시간 이상 된 활성 커뮤니티 딜만 체크
+        # 등록 후 1시간 이상 된 활성 딜 전체 체크 (source_post_url 있는 것)
         deals = db.get_community_deals_for_expiry_check(hours_since_created=1)
         if not deals:
             return
 
-        logger.info(f"[커뮤니티 만료체크] {len(deals)}개 딜 확인 시작")
+        logger.info(f"[원글 만료체크] {len(deals)}개 딜 확인 시작")
         expired_count = 0
 
         async def check_one(deal):
@@ -597,7 +597,7 @@ def start_scheduler():
         _check_community_deal_expiry,
         trigger=IntervalTrigger(minutes=30),
         id="community_expiry_check",
-        name="커뮤니티 딜 원글 만료 자동 감지 (30m)",
+        name="원글 만료 자동 감지 — 전체 딜 (30m)",
         replace_existing=True,
     )
     scheduler.add_job(
