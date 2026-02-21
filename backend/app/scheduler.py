@@ -394,6 +394,68 @@ async def _expire_old_deals():
         logger.error(f"❌ 딜 만료 처리 오류: {e}")
 
 
+async def _sync_algumon():
+    """알구몬 API로 커뮤니티 딜 수집 (뽐뿌+루리웹+어미새+아카라이브)"""
+    try:
+        import app.db_supabase as db
+        from app.services.algumon import fetch_algumon_deals, fetch_ruliweb_deals, process_algumon_deals
+        from app.services.categorizer import infer_category
+
+        # 최근 등록된 커뮤니티 딜 URL 목록 (중복 방지)
+        sb = db.get_supabase()
+        recent = sb.table("deals").select("product_url").eq("source", "community").limit(300).execute()
+        existing_urls = {r["product_url"] for r in (recent.data or []) if r.get("product_url")}
+
+        # 알구몬 5페이지 (50개) + 루리웹 RSS 병렬 수집
+        algumon_raw, ruliweb_raw = await asyncio.gather(
+            fetch_algumon_deals(pages=5),
+            fetch_ruliweb_deals(),
+            return_exceptions=True,
+        )
+        raw = []
+        if isinstance(algumon_raw, list): raw.extend(algumon_raw)
+        if isinstance(ruliweb_raw, list): raw.extend(ruliweb_raw)
+
+        if not raw:
+            return
+
+        logger.info(f"[알구몬] 원본 {len(raw)}개 수집")
+        processed = await process_algumon_deals(raw, existing_urls)
+        logger.info(f"[알구몬] 필터 통과 {len(processed)}개")
+
+        saved = 0
+        for deal_data in processed:
+            try:
+                # 카테고리 추론
+                if not deal_data.get("category") or deal_data["category"] == "기타":
+                    deal_data["category"] = infer_category(deal_data["title"])
+
+                db.create_deal({
+                    "title": deal_data["title"],
+                    "sale_price": deal_data["sale_price"],
+                    "original_price": deal_data["original_price"],
+                    "discount_rate": deal_data["discount_rate"],
+                    "product_url": deal_data["product_url"],
+                    "source_post_url": deal_data.get("source_post_url"),
+                    "image_url": deal_data.get("image_url", ""),
+                    "source": "community",
+                    "category": deal_data["category"],
+                    "description": deal_data.get("description", ""),
+                })
+                saved += 1
+            except ValueError as e:
+                logger.debug(f"[알구몬] 등록 거부: {e}")
+            except Exception as e:
+                if "duplicate" not in str(e).lower() and "unique" not in str(e).lower():
+                    logger.warning(f"[알구몬] 등록 오류: {e}")
+
+        if saved:
+            logger.info(f"✅ 알구몬 {saved}개 등록 완료")
+
+    except Exception as e:
+        logger.error(f"❌ 알구몬 동기화 오류: {e}")
+
+
 async def _check_community_deal_expiry():
     """커뮤니티 딜 원글 만료 감지 → 자동 expired 처리"""
     try:
@@ -522,6 +584,13 @@ def start_scheduler():
         trigger=IntervalTrigger(hours=6),
         id="expire_old_deals",
         name="오래된 딜 자동 만료 (3일 이상)",
+        replace_existing=True,
+    )
+    scheduler.add_job(
+        _sync_algumon,
+        trigger=IntervalTrigger(minutes=20),
+        id="sync_algumon",
+        name="알구몬 커뮤니티 딜 동기화 (20m)",
         replace_existing=True,
     )
     scheduler.add_job(
