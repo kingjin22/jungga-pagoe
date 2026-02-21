@@ -166,12 +166,13 @@ async def verify_deal(deal) -> dict:
     current_price = None
     naver_product_id = deal.get("naver_product_id") if isinstance(deal, dict) else getattr(deal, "naver_product_id", None)
 
-    if deal_source in ("naver", "community"):
+    # admin 딜 포함 모든 소스 가격 체크 (coupang은 Naver 검색으로 보완)
+    if deal_source in ("naver", "community", "admin", "coupang"):
         if naver_product_id:
             # productId로 직접 조회 → 정확한 현재 최저가
             current_price = await check_naver_price_by_id(str(naver_product_id))
         if current_price is None:
-            # fallback: 제목 키워드 검색
+            # fallback: 제목 키워드 검색 (admin/coupang 딜도 Naver에서 현재가 탐지)
             current_price = await check_naver_price(str(deal_title), float(deal_sale_price or 0))
 
     if current_price is not None:

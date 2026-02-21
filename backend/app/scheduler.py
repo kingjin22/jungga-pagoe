@@ -318,7 +318,22 @@ async def _verify_prices():
                 elif action == "expired":
                     patch["status"] = "expired"; patch["verify_fail_count"] = 0; expired_count += 1
                 elif action == "price_changed":
-                    patch["status"] = "price_changed"; patch["verify_fail_count"] = 0; changed += 1
+                    new_price = check.get("verified_price")
+                    orig = float(deal.get("original_price") or 0)
+                    # 현재가가 정가의 90% 이상 = 할인율 10% 미만 → 완전 만료
+                    if new_price and orig > 0 and new_price >= orig * 0.90:
+                        patch["status"] = "expired"
+                        patch["verify_fail_count"] = 0
+                        expired_count += 1
+                        dr_now = round((1 - new_price / orig) * 100, 1)
+                        logger.info(
+                            f"  🛑 할인 소멸 만료: {deal.get('title','')[:40]} "
+                            f"| 현재할인={dr_now}%"
+                        )
+                    else:
+                        patch["status"] = "price_changed"
+                        patch["verify_fail_count"] = 0
+                        changed += 1
                 elif action == "price_dropped":
                     # 네이버 최저가 < 우리 표시가 → sale_price 업데이트 (정확성 유지 핵심!)
                     new_price = check["verified_price"]
@@ -670,13 +685,28 @@ async def _cleanup_invalid_deals():
             }).eq("id", d["id"]).execute()
             logger.info(f"🗑 자동만료(식품): #{d['id']} {d['title'][:35]}")
 
-        # 3) is_hot 동기화: 할인율 30% 이상인데 is_hot=False인 active 딜 수정
-        res3 = sb.table("deals").select("id,discount_rate") \
+        # 3) 할인율 10% 미만 active 딜 만료 (핫딜 최소 기준)
+        # sale_price > 0 인 유료 딜만 대상 (무료딜 discount_rate=100은 예외)
+        res3 = sb.table("deals").select("id,title,discount_rate,sale_price,source") \
+            .eq("status", "active") \
+            .gt("sale_price", 0) \
+            .lt("discount_rate", 10) \
+            .gt("discount_rate", 0) \
+            .execute()
+        for d in (res3.data or []):
+            sb.table("deals").update({
+                "status": "expired",
+                "admin_note": f"[자동만료] 할인율 {d['discount_rate']}% < 10%"
+            }).eq("id", d["id"]).execute()
+            logger.info(f"🗑 자동만료(할인<10%): #{d['id']} {d['title'][:35]} | {d['discount_rate']}%")
+
+        # 4) is_hot 동기화: 할인율 30% 이상인데 is_hot=False인 active 딜 수정
+        res4 = sb.table("deals").select("id,discount_rate") \
             .eq("status", "active") \
             .eq("is_hot", False) \
             .gte("discount_rate", 30) \
             .execute()
-        for d in (res3.data or []):
+        for d in (res4.data or []):
             sb.table("deals").update({"is_hot": True}).eq("id", d["id"]).execute()
             logger.info(f"⭐ is_hot 동기화: #{d['id']} {d['discount_rate']}%")
 
