@@ -152,8 +152,8 @@ def upvote_deal(deal_id: int) -> dict:
 def create_deal(data: dict) -> dict:
     sb = get_supabase()
     # discount_rate 계산
-    orig = float(data.get("original_price", 0))
-    sale = float(data.get("sale_price", 0))
+    orig = float(data.get("original_price", 0) or 0)
+    sale = float(data.get("sale_price", 0) or 0)
     if orig > 0 and sale > 0:
         data["discount_rate"] = round((1 - sale / orig) * 100, 1)
 
@@ -163,11 +163,23 @@ def create_deal(data: dict) -> dict:
         raise ValueError(
             f"[철칙위반] original_price({orig}) <= sale_price({sale}) — 저장 거부: {data.get('title','')[:40]}"
         )
-    dr = float(data.get("discount_rate", 0))
+    dr = float(data.get("discount_rate", 0) or 0)
     if sale > 0 and dr <= 0:
         raise ValueError(
             f"[철칙위반] discount_rate={dr}% — 저장 거부: {data.get('title','')[:40]}"
         )
+    # 커뮤니티 딜 식품/일상용품 최후 방어선
+    if data.get("source") == "community" and sale > 0:
+        try:
+            from app.services.community_enricher import is_food_or_daily
+            title = data.get("title", "")
+            category = data.get("category", "")
+            if is_food_or_daily(title, category):
+                raise ValueError(
+                    f"[철칙위반] 커뮤니티 식품/일상용품 저장 거부: {title[:40]}"
+                )
+        except ImportError:
+            pass
     # ═══════════════════════════════════════════════
 
     data.setdefault("status", "active")

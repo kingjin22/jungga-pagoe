@@ -179,35 +179,16 @@ async def sync_naver_deals():
 
 @router.post("/sync/ppomppu")
 async def sync_ppomppu_deals():
-    from app.services.ppomppu import fetch_ppomppu_deals
-    deals_data = await fetch_ppomppu_deals()
-    created = 0
-    for item in deals_data:
-        if db.deal_url_exists(item["product_url"]):
-            continue
-        orig = item.get("original_price", 0)
-        sale = item.get("sale_price", 0)
-        if orig <= 0 or sale <= 0:
-            continue
-        discount_rate = item.get("discount_rate") or round((1 - sale / orig) * 100, 1)
-        if discount_rate < 5:
-            continue
-        db.create_deal({
-            "title": item["title"],
-            "description": item.get("description"),
-            "original_price": orig,
-            "sale_price": sale,
-            "discount_rate": discount_rate,
-            "image_url": item.get("image_url"),
-            "product_url": item["product_url"],
-            "source": "community",
-            "category": item.get("category", "기타"),
-            "status": "active",
-            "is_hot": discount_rate >= 40,
-            "submitter_name": "뽐뿌",
-        })
-        created += 1
-    return {"synced": created, "message": f"{created}개 뽐뿌 딜 동기화 완료"}
+    """
+    ⛔ 비활성화: Playwright 검증 없이 저장하던 레거시 엔드포인트
+    - discount_rate=0 딜 대량 생성 원인 (식품 필터 미적용, orig==sale 허용)
+    - 대신 스케줄러 _sync_ppomppu() 사용 (10분 주기, Playwright 가격 검증)
+    """
+    from fastapi import HTTPException
+    raise HTTPException(
+        status_code=410,
+        detail="이 엔드포인트는 비활성화됐습니다. 뽐뿌 수집은 스케줄러가 자동으로 처리합니다."
+    )
 
 
 @router.post("/sync/coupang")

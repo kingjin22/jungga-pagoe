@@ -196,7 +196,8 @@ async def _sync_ppomppu():
                     "sale_price": sale,
                     "discount_rate": discount_rate,
                     "image_url": item.get("image_url"),
-                    "product_url": retailer_url,  # 실제 쇼핑몰 URL
+                    "product_url": retailer_url,           # 실제 쇼핑몰 URL
+                    "source_post_url": item.get("source_post_url") or ppomppu_url,  # 원글 URL (만료 감지)
                     "source": "community",
                     "category": item.get("category", "기타"),
                     "status": "active",
