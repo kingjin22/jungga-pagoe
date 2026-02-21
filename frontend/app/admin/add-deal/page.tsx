@@ -32,6 +32,12 @@ interface FormState {
 
 export default function AddDealPage() {
   const router = useRouter();
+
+  // URL 자동 파싱
+  const [parseLoading, setParseLoading] = useState(false);
+  const [parseError, setParseError] = useState("");
+
+  // Naver 자동완성
   const [lookupQuery, setLookupQuery] = useState("");
   const [lookupResults, setLookupResults] = useState<NaverResult[]>([]);
   const [lookupLoading, setLookupLoading] = useState(false);
@@ -56,20 +62,42 @@ export default function AddDealPage() {
       ? Math.round((1 - Number(form.sale_price) / Number(form.original_price)) * 100)
       : null;
 
-  /* ── URL 붙여넣기 → 자동 Naver 조회 ── */
-  const handleUrlPaste = async (url: string) => {
-    if (!url.startsWith("http") || form.title) return;
-    setLookupLoading(true);
+  const isCoupangPartners =
+    form.product_url.toLowerCase().includes("link.coupang.com");
+  const isCoupangDirect =
+    (form.product_url.toLowerCase().includes("coupang.com") ||
+      form.product_url.toLowerCase().includes("coupa.ng")) &&
+    !isCoupangPartners;
+
+  /* ── URL → 자동 파싱 ── */
+  const handleParseUrl = async (url?: string) => {
+    const targetUrl = url || form.product_url;
+    if (!targetUrl.startsWith("http")) return;
+    setParseLoading(true);
+    setParseError("");
     try {
       const res = await fetch(
-        `${API_BASE}/admin/lookup?q=${encodeURIComponent(url)}`,
+        `${API_BASE}/admin/parse-url?url=${encodeURIComponent(targetUrl)}`,
         { headers: { "X-Admin-Key": getAdminKey() } }
       );
       const data = await res.json();
-      const results: NaverResult[] = data.results || [];
-      if (results.length > 0) setLookupResults(results);
-    } catch { /* silent */ } finally {
-      setLookupLoading(false);
+      if (data.error) {
+        setParseError(data.error);
+        return;
+      }
+      setForm((f) => ({
+        ...f,
+        product_url: url || f.product_url,
+        title: data.title || f.title,
+        sale_price: data.sale_price ? String(data.sale_price) : f.sale_price,
+        original_price: data.original_price ? String(data.original_price) : f.original_price,
+        image_url: data.image_url || f.image_url,
+        source: data.source || f.source,
+      }));
+    } catch {
+      setParseError("파싱 실패 — 직접 입력하세요");
+    } finally {
+      setParseLoading(false);
     }
   };
 
@@ -95,9 +123,10 @@ export default function AddDealPage() {
   const applyResult = (r: NaverResult) => {
     setForm((f) => ({
       ...f,
-      title: r.title,
+      title: r.title || f.title,
       original_price: r.hprice ? String(r.hprice) : f.original_price,
-      image_url: r.image,
+      sale_price: r.lprice && !f.sale_price ? String(r.lprice) : f.sale_price,
+      image_url: r.image || f.image_url,
     }));
     setLookupResults([]);
     setLookupQuery("");
@@ -108,7 +137,6 @@ export default function AddDealPage() {
     e.preventDefault();
     setError("");
     setSubmitting(true);
-
     const orig = Number(form.original_price);
     const sale = Number(form.sale_price);
     if (sale > 0 && orig <= sale) {
@@ -116,7 +144,6 @@ export default function AddDealPage() {
       setSubmitting(false);
       return;
     }
-
     try {
       const res = await fetch(`${API_BASE}/admin/deals/quick-add`, {
         method: "POST",
@@ -191,15 +218,69 @@ export default function AddDealPage() {
         </div>
       )}
 
+      {/* ── URL 자동 채우기 섹션 ── */}
+      <div className="mb-5 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <p className="text-xs font-semibold text-blue-700 mb-2 uppercase tracking-wide">
+          🔗 URL 붙여넣기 → 자동 채우기
+        </p>
+        <div className="flex gap-2">
+          <input
+            type="url"
+            placeholder="상품 URL 붙여넣기 (쿠팡·네이버·11번가·G마켓)"
+            className="flex-1 border border-blue-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500 bg-white"
+            onPaste={(e) => {
+              const pasted = e.clipboardData.getData("text").trim();
+              if (!pasted.startsWith("http")) return;
+              const u = pasted.toLowerCase();
+              const source = u.includes("coupang") ? "coupang"
+                : u.includes("naver") ? "naver" : "etc";
+              setForm((f) => ({ ...f, product_url: pasted, source }));
+              setTimeout(() => handleParseUrl(pasted), 150);
+            }}
+            value={form.product_url}
+            onChange={(e) => {
+              const url = e.target.value;
+              const u = url.toLowerCase();
+              const source = u.includes("coupang") ? "coupang"
+                : u.includes("naver") ? "naver" : form.source;
+              setForm({ ...form, product_url: url, source });
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => handleParseUrl()}
+            disabled={parseLoading || !form.product_url.startsWith("http")}
+            className="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 disabled:opacity-40 whitespace-nowrap"
+          >
+            {parseLoading ? "분석 중…" : "자동 채우기"}
+          </button>
+        </div>
+        {parseError && (
+          <div className="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5">
+            ⚠️ {parseError}
+            {parseError.includes("쿠팡") && (
+              <span className="block mt-0.5 text-gray-500">
+                → 상품명을 아래 Naver 검색에 붙여넣으면 정가를 자동으로 찾습니다
+              </span>
+            )}
+          </div>
+        )}
+        {!parseError && (
+          <p className="mt-1 text-xs text-blue-500">
+            붙여넣으면 제목·정가·할인가 자동 입력 (쿠팡은 Naver 검색 이용)
+          </p>
+        )}
+      </div>
+
       {/* Naver 자동완성 */}
       <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
         <p className="text-xs font-medium text-gray-500 mb-2 uppercase tracking-wide">
-          Naver 상품 자동완성
+          Naver 상품 검색 자동완성
         </p>
         <div className="flex gap-2">
           <input
             type="text"
-            placeholder="상품명 또는 쿠팡 URL 붙여넣기"
+            placeholder="상품명으로 검색"
             value={lookupQuery}
             onChange={(e) => setLookupQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleLookup())}
@@ -211,10 +292,9 @@ export default function AddDealPage() {
             disabled={lookupLoading}
             className="px-4 py-2 bg-gray-900 text-white text-sm rounded hover:bg-gray-700 disabled:opacity-50"
           >
-            {lookupLoading ? "조회 중…" : "자동완성"}
+            {lookupLoading ? "조회 중…" : "검색"}
           </button>
         </div>
-
         {lookupResults.length > 0 && (
           <ul className="mt-2 border border-gray-200 rounded bg-white divide-y">
             {lookupResults.map((r, i) => (
@@ -243,51 +323,35 @@ export default function AddDealPage() {
         )}
       </div>
 
-      {/* 등록 폼 */}
+      {/* ── 등록 폼 ── */}
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* 상품 URL */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            상품 URL <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="url"
-            required
-            placeholder="https://www.coupang.com/vp/products/..."
-            value={form.product_url}
-            onChange={(e) => {
-              const url = e.target.value.toLowerCase();
-              const source = url.includes("coupang.com") || url.includes("coupa.ng")
-                ? "coupang"
-                : url.includes("naver.com") || url.includes("smartstore")
-                ? "naver"
-                : form.source;
-              setForm({ ...form, product_url: e.target.value, source });
-            }}
-            onBlur={(e) => handleUrlPaste(e.target.value)}
-            className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-gray-500"
-          />
-          {(form.product_url.toLowerCase().includes("coupang.com") ||
-            form.product_url.toLowerCase().includes("coupa.ng")) &&
-            !form.product_url.toLowerCase().includes("link.coupang.com") && (
-            <div className="mt-1 flex items-center gap-2">
-              <p className="text-xs text-amber-600">⚠ 파트너스 링크 아님 — 아래 버튼으로 변환 후 붙여넣기</p>
-              <a
-                href={`https://partners.coupang.com/#affiliate/ws/link-to-any-page?url=${encodeURIComponent(form.product_url)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs px-2 py-0.5 bg-red-600 text-white rounded hover:bg-red-700"
-              >
-                파트너스 링크 생성 →
-              </a>
-            </div>
-          )}
-          {form.product_url.toLowerCase().includes("link.coupang.com") && (
-            <p className="mt-1 text-xs text-emerald-600">
-              ✅ 파트너스 추적 링크 확인됨
-            </p>
-          )}
-        </div>
+        {/* 상품 URL (위 입력과 연동, 확인용) */}
+        {form.product_url && (
+          <div className="p-2 bg-gray-50 border border-gray-200 rounded text-xs text-gray-500 break-all">
+            <span className="font-medium text-gray-700">URL: </span>
+            {form.product_url.length > 70
+              ? form.product_url.slice(0, 70) + "…"
+              : form.product_url}
+            {isCoupangDirect && (
+              <span className="ml-2 inline-flex items-center gap-1">
+                <span className="text-amber-600">⚠ 파트너스 아님</span>
+                <a
+                  href={`https://partners.coupang.com/#affiliate/ws/link-to-any-page?url=${encodeURIComponent(form.product_url)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-1.5 py-0.5 bg-red-600 text-white rounded hover:bg-red-700"
+                >
+                  파트너스 변환 →
+                </a>
+              </span>
+            )}
+            {isCoupangPartners && (
+              <span className="ml-2 text-emerald-600">✅ 파트너스</span>
+            )}
+          </div>
+        )}
+        {/* hidden URL field for form submission */}
+        <input type="hidden" name="product_url" value={form.product_url} />
 
         {/* 제목 */}
         <div>
@@ -314,7 +378,7 @@ export default function AddDealPage() {
               type="number"
               required
               min={1}
-              placeholder="219000"
+              placeholder="48000"
               value={form.original_price}
               onChange={(e) => setForm({ ...form, original_price: e.target.value })}
               className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-gray-500"
@@ -328,7 +392,7 @@ export default function AddDealPage() {
               type="number"
               required
               min={0}
-              placeholder="186000"
+              placeholder="11990"
               value={form.sale_price}
               onChange={(e) => setForm({ ...form, sale_price: e.target.value })}
               className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-gray-500"
@@ -336,7 +400,6 @@ export default function AddDealPage() {
           </div>
         </div>
 
-        {/* 할인율 표시 */}
         {discountRate !== null && (
           <p className={`text-sm font-medium ${discountRate > 0 ? "text-red-600" : "text-gray-400"}`}>
             {discountRate > 0 ? `→ ${discountRate}% 할인` : "⚠️ 할인 없음 (등록 불가)"}

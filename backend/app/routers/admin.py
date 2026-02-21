@@ -554,3 +554,18 @@ async def reprocess_community_deals(
             results["kept_pending"] += 1
 
     return results
+
+
+@router.get("/parse-url")
+async def parse_product_url_endpoint(
+    url: str = Query(..., description="상품 URL"),
+    x_admin_key: Optional[str] = Header(None),
+):
+    """
+    URL에서 제목/정가/판매가/이미지 자동 파싱
+    GET /admin/parse-url?url=https://www.coupang.com/...
+    """
+    verify_admin(x_admin_key)
+    from app.services.url_parser import parse_product_url
+    result = await parse_product_url(url)
+    return result.to_dict()
