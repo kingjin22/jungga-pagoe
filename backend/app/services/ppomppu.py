@@ -242,50 +242,23 @@ async def fetch_ppomppu_deals() -> list[dict]:
             if isinstance(nav, Exception):
                 nav = {}
 
-            # 식품/일상용품 필터 (커뮤니티 딜 금지)
-            from app.services.community_enricher import is_food_or_daily, lookup_msrp_from_naver
+            # 식품/일상용품 필터
+            from app.services.community_enricher import is_food_or_daily
             if is_food_or_daily(deal["title"], deal.get("category", "")):
                 continue
 
-            # 가격 확정
+            # 이미지: Naver 검색 결과 우선
             naver_img = nav.get("image_url")
+
+            # 가격 확정 (커뮤니티 딜: MSRP 없이 판매가만)
             if deal["is_free"]:
                 sale_price = 0.0
-                orig_price = 0.0
-                dr = 100.0
             elif deal["krw_price"]:
                 sale_price = float(deal["krw_price"])
-                dr = deal["discount_rate"]
-                if dr <= 0:
-                    # 할인율 미기재 → Naver MSRP 자동 탐지
-                    msrp = await lookup_msrp_from_naver(deal["title"], int(sale_price))
-                    if msrp and msrp["original_price"] > sale_price:
-                        orig_price = float(msrp["original_price"])
-                        dr = msrp["discount_rate"]
-                        naver_img = naver_img or msrp.get("image_url")
-                    else:
-                        continue  # 정가 탐지 실패 → 수집 금지
-                else:
-                    orig_price = round(sale_price / (1 - dr / 100))
             elif deal["usd_price"]:
                 sale_price = round(deal["usd_price"] * usd_krw / 100) * 100
-                dr = deal["discount_rate"]
-                if dr <= 0:
-                    msrp = await lookup_msrp_from_naver(deal["title"], int(sale_price))
-                    if msrp and msrp["original_price"] > sale_price:
-                        orig_price = float(msrp["original_price"])
-                        dr = msrp["discount_rate"]
-                        naver_img = naver_img or msrp.get("image_url")
-                    else:
-                        continue
-                else:
-                    orig_price = round(sale_price / (1 - dr / 100))
             else:
-                continue
-
-            # 최소 할인율 재검증
-            if dr < 5:
-                continue
+                continue  # 가격 정보 없음
 
             # 표시 제목: retailer 있으면 앞에 붙임
             display_title = deal["title"]
@@ -296,8 +269,8 @@ async def fetch_ppomppu_deals() -> list[dict]:
                 "title": display_title,
                 "description": deal["description"],
                 "sale_price": sale_price,
-                "original_price": orig_price,
-                "discount_rate": dr,
+                "original_price": 0,    # 커뮤니티 딜: 정가 미확인
+                "discount_rate": 0,
                 "image_url": naver_img,
                 "product_url": nav.get("product_url") or deal["ppomppu_url"],
                 "source_post_url": deal["ppomppu_url"],   # 원글 URL (만료 감지용)

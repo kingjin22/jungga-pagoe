@@ -157,29 +157,31 @@ def create_deal(data: dict) -> dict:
     if orig > 0 and sale > 0:
         data["discount_rate"] = round((1 - sale / orig) * 100, 1)
 
-    # ══ 철칙 최후 방어선 ══════════════════════════════
-    # 무료딜(sale=0)은 예외, 나머지는 정가 > 판매가 필수
-    if sale > 0 and orig <= sale:
-        raise ValueError(
-            f"[철칙위반] original_price({orig}) <= sale_price({sale}) — 저장 거부: {data.get('title','')[:40]}"
-        )
-    dr = float(data.get("discount_rate", 0) or 0)
-    if sale > 0 and dr <= 0:
-        raise ValueError(
-            f"[철칙위반] discount_rate={dr}% — 저장 거부: {data.get('title','')[:40]}"
-        )
-    # 커뮤니티 딜 식품/일상용품 최후 방어선
-    if data.get("source") == "community" and sale > 0:
+    is_community = data.get("source") == "community"
+
+    # ══ 커뮤니티 딜 식품 방어선 ══════════════════════
+    if is_community and sale > 0:
         try:
             from app.services.community_enricher import is_food_or_daily
-            title = data.get("title", "")
-            category = data.get("category", "")
-            if is_food_or_daily(title, category):
+            if is_food_or_daily(data.get("title", ""), data.get("category", "")):
                 raise ValueError(
-                    f"[철칙위반] 커뮤니티 식품/일상용품 저장 거부: {title[:40]}"
+                    f"[철칙위반] 커뮤니티 식품/일상용품 저장 거부: {data.get('title','')[:40]}"
                 )
         except ImportError:
             pass
+
+    # ══ 철칙 최후 방어선 (비커뮤니티 딜만) ══════════
+    # 커뮤니티 딜은 MSRP 없이 가격만 노출 → orig/dr 검증 생략
+    if not is_community:
+        if sale > 0 and orig <= sale:
+            raise ValueError(
+                f"[철칙위반] original_price({orig}) <= sale_price({sale}) — 저장 거부: {data.get('title','')[:40]}"
+            )
+        dr = float(data.get("discount_rate", 0) or 0)
+        if sale > 0 and dr <= 0:
+            raise ValueError(
+                f"[철칙위반] discount_rate={dr}% — 저장 거부: {data.get('title','')[:40]}"
+            )
     # ═══════════════════════════════════════════════
 
     data.setdefault("status", "active")

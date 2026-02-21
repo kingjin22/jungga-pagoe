@@ -177,7 +177,7 @@ async def process_algumon_deals(
     4. Naver MSRP 탐지
     5. 할인율 계산
     """
-    from app.services.community_enricher import is_food_or_daily, lookup_msrp_from_naver
+    from app.services.community_enricher import is_food_or_daily
 
     results = []
     seen_urls = set(existing_urls)
@@ -213,28 +213,22 @@ async def process_algumon_deals(
 
         # ⑤ 가격 파싱
         sale_price = _parse_price(price_text)
-        if not sale_price or sale_price < 3000:
-            continue
-
-        # ⑥ Naver MSRP 탐지
-        msrp = await lookup_msrp_from_naver(title, sale_price)
-        if not msrp or msrp["original_price"] <= sale_price:
-            continue
-        if msrp["discount_rate"] < 8:  # 8% 미만 할인 제외
+        if not sale_price or sale_price < 1000:
             continue
 
         seen_urls.add(link_url)
 
+        # 커뮤니티 딜: MSRP 없이 판매가만 노출 (원글 만료 시 자동 만료)
         results.append({
             "title": title,
             "sale_price": sale_price,
-            "original_price": msrp["original_price"],
-            "discount_rate": msrp["discount_rate"],
+            "original_price": 0,   # 정가 미확인 — 커뮤니티 딜
+            "discount_rate": 0,
             "product_url": link_url,
             "source_post_url": link_url,
-            "image_url": thumbnail or msrp.get("image_url", ""),
+            "image_url": thumbnail,
             "source": "community",
-            "category": "기타",  # 이후 categorizer로 추론
+            "category": "기타",
             "description": f"출처: {site_name} | {store_name}",
             "submitter_name": site_name,
             "algumon_likes": likes,

@@ -136,6 +136,10 @@ export default function DealCard({ deal, onClick }: DealCardProps) {
           <div className="absolute top-0 left-0 bg-[#E31E24] text-white text-[11px] font-bold px-2.5 py-1.5 leading-none">
             -{Math.round(deal.discount_rate)}%
           </div>
+        ) : deal.source === "community" ? (
+          <div className="absolute top-0 left-0 bg-indigo-600 text-white text-[11px] font-bold px-2.5 py-1.5 leading-none">
+            커뮤니티
+          </div>
         ) : null}
 
         {/* 출처 칩 (리테일러 or 소스) — 브랜드 페이지 있으면 링크 */}

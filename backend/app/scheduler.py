@@ -321,8 +321,13 @@ async def _verify_prices():
                 elif action == "price_changed":
                     new_price = check.get("verified_price")
                     orig = float(deal.get("original_price") or 0)
+                    # 커뮤니티 딜은 orig=0이므로 가격변동 만료 판단 불가 → 원글 만료 감지에 맡김
+                    if deal.get("source") == "community" or orig <= 0:
+                        patch["status"] = "active"  # 그냥 유지
+                        patch["verify_fail_count"] = 0
+                        ok += 1
                     # 현재가가 정가의 90% 이상 = 할인율 10% 미만 → 완전 만료
-                    if new_price and orig > 0 and new_price >= orig * 0.90:
+                    elif new_price and new_price >= orig * 0.90:
                         patch["status"] = "expired"
                         patch["verify_fail_count"] = 0
                         expired_count += 1
@@ -656,10 +661,11 @@ async def _cleanup_invalid_deals():
         import app.db_supabase as db
         sb = db.get_supabase()
 
-        # 1) 할인율 0% active 딜 (source 무관)
+        # 1) 할인율 0% active 딜 — 커뮤니티 딜은 제외 (MSRP 없이 등록하는 방식)
         res = sb.table("deals").select("id,title,discount_rate,category,source") \
             .eq("status", "active") \
             .eq("discount_rate", 0) \
+            .neq("source", "community") \
             .execute()
         for d in (res.data or []):
             # 무료딜(sale_price=0)은 예외
@@ -686,10 +692,10 @@ async def _cleanup_invalid_deals():
             }).eq("id", d["id"]).execute()
             logger.info(f"🗑 자동만료(식품): #{d['id']} {d['title'][:35]}")
 
-        # 3) 할인율 10% 미만 active 딜 만료 (핫딜 최소 기준)
-        # sale_price > 0 인 유료 딜만 대상 (무료딜 discount_rate=100은 예외)
+        # 3) 할인율 10% 미만 active 딜 만료 (비커뮤니티 딜만 — 커뮤니티는 MSRP 없이 등록)
         res3 = sb.table("deals").select("id,title,discount_rate,sale_price,source") \
             .eq("status", "active") \
+            .neq("source", "community") \
             .gt("sale_price", 0) \
             .lt("discount_rate", 10) \
             .gt("discount_rate", 0) \
