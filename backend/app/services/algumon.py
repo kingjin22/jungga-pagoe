@@ -177,7 +177,7 @@ async def process_algumon_deals(
     4. Naver MSRP 탐지
     5. 할인율 계산
     """
-    from app.services.community_enricher import is_food_or_daily
+    from app.services.community_enricher import is_food_or_daily, check_price_vs_naver
 
     results = []
     seen_urls = set(existing_urls)
@@ -218,12 +218,28 @@ async def process_algumon_deals(
 
         seen_urls.add(link_url)
 
-        # 커뮤니티 딜: MSRP 없이 판매가만 노출 (원글 만료 시 자동 만료)
+        # ⑥ Naver lprice 비교 필터
+        naver_check = await check_price_vs_naver(title, sale_price)
+        await asyncio.sleep(0.2)  # API 레이트 리밋 방지
+
+        if not naver_check["is_deal"]:
+            logger.info(f"[알구몬] Naver lprice 필터 탈락: {title[:40]} | lprice={naver_check['lprice']:,} sale={sale_price:,}")
+            continue
+
+        # lprice > 0이면 정가/할인율 계산, 없으면 0으로 유지
+        lprice = naver_check["lprice"]
+        if lprice > 0:
+            original_price = lprice
+            discount_rate = naver_check["discount_rate"]
+        else:
+            original_price = 0
+            discount_rate = 0
+
         results.append({
             "title": title,
             "sale_price": sale_price,
-            "original_price": 0,   # 정가 미확인 — 커뮤니티 딜
-            "discount_rate": 0,
+            "original_price": original_price,
+            "discount_rate": discount_rate,
             "product_url": link_url,
             "source_post_url": link_url,
             "image_url": thumbnail,
@@ -233,7 +249,5 @@ async def process_algumon_deals(
             "submitter_name": site_name,
             "algumon_likes": likes,
         })
-
-        await asyncio.sleep(0.1)  # Naver API 요청 간격
 
     return results

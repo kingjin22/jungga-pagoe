@@ -243,7 +243,7 @@ async def fetch_ppomppu_deals() -> list[dict]:
                 nav = {}
 
             # 식품/일상용품 필터
-            from app.services.community_enricher import is_food_or_daily
+            from app.services.community_enricher import is_food_or_daily, check_price_vs_naver
             if is_food_or_daily(deal["title"], deal.get("category", "")):
                 continue
 
@@ -260,6 +260,23 @@ async def fetch_ppomppu_deals() -> list[dict]:
             else:
                 continue  # 가격 정보 없음
 
+            # Naver lprice 비교 필터 (is_free 딜은 스킵)
+            original_price = 0
+            discount_rate = 0
+            if not deal["is_free"] and sale_price > 0:
+                naver_check = await check_price_vs_naver(deal["title"], int(sale_price))
+                await asyncio.sleep(0.2)  # API 레이트 리밋 방지
+                if not naver_check["is_deal"]:
+                    import logging as _logging
+                    _logging.getLogger(__name__).info(
+                        f"[뽐뿌] Naver lprice 필터 탈락: {deal['title'][:40]} | lprice={naver_check['lprice']:,} sale={int(sale_price):,}"
+                    )
+                    continue
+                lprice = naver_check["lprice"]
+                if lprice > 0:
+                    original_price = lprice
+                    discount_rate = naver_check["discount_rate"]
+
             # 표시 제목: retailer 있으면 앞에 붙임
             display_title = deal["title"]
             if deal["retailer"] and deal["retailer"] not in display_title:
@@ -269,8 +286,8 @@ async def fetch_ppomppu_deals() -> list[dict]:
                 "title": display_title,
                 "description": deal["description"],
                 "sale_price": sale_price,
-                "original_price": 0,    # 커뮤니티 딜: 정가 미확인
-                "discount_rate": 0,
+                "original_price": original_price,
+                "discount_rate": discount_rate,
                 "image_url": naver_img,
                 "product_url": nav.get("product_url") or deal["ppomppu_url"],
                 "source_post_url": deal["ppomppu_url"],   # 원글 URL (만료 감지용)

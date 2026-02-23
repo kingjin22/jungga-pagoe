@@ -256,3 +256,62 @@ async def check_deal_expired_from_url(url: str) -> tuple[bool, str]:
                 return True, f"댓글종료:{kw}"
 
     return False, ""
+
+
+async def check_price_vs_naver(title: str, sale_price: int) -> dict:
+    """
+    Naver Shopping API로 현재가(lprice) 비교 → 딜 여부 판별
+
+    Returns:
+        {"lprice": int, "is_deal": bool, "discount_rate": float}
+        - is_deal=True : lprice > sale_price * 1.10 (네이버보다 10%+ 쌈)
+        - is_deal=False: lprice <= sale_price * 1.05 (딜 아님)
+        - lprice=0     : 결과 없음 → is_deal=True (검증 불가, 일단 통과)
+    """
+    import os, urllib.parse, statistics
+
+    client_id = os.environ.get("NAVER_CLIENT_ID", "wHDtIpb0AI8X7RlUSBJP")
+    client_secret = os.environ.get("NAVER_CLIENT_SECRET", "oZZAfOcWU7")
+
+    # 제목 전처리
+    clean = re.sub(r"\[[-\s]*[^\]]+\]", "", title).strip()
+    clean = re.sub(r"\(.*?\)", "", clean).strip()
+    clean = re.sub(r"\s+", " ", clean).strip()[:40]
+
+    if len(clean) < 3:
+        return {"lprice": 0, "is_deal": True, "discount_rate": 0.0}
+
+    query = urllib.parse.quote(clean)
+    url = f"https://openapi.naver.com/v1/search/shop.json?query={query}&display=5&sort=sim"
+
+    try:
+        async with httpx.AsyncClient(timeout=8) as client:
+            r = await client.get(url, headers={
+                "X-Naver-Client-Id": client_id,
+                "X-Naver-Client-Secret": client_secret,
+            })
+            data = r.json()
+    except Exception as e:
+        logger.warning(f"[check_price_vs_naver] Naver API 오류: {e}")
+        return {"lprice": 0, "is_deal": True, "discount_rate": 0.0}
+
+    items = data.get("items", [])
+    if not items:
+        return {"lprice": 0, "is_deal": True, "discount_rate": 0.0}
+
+    lprices = [int(item.get("lprice", 0) or 0) for item in items if int(item.get("lprice", 0) or 0) > 0]
+    if not lprices:
+        return {"lprice": 0, "is_deal": True, "discount_rate": 0.0}
+
+    lprice_median = int(statistics.median(lprices))
+
+    if lprice_median > sale_price * 1.10:
+        discount_rate = round((1 - sale_price / lprice_median) * 100, 1)
+        logger.info(f"[check_price_vs_naver] 딜 확인: {clean[:30]} | 네이버={lprice_median:,} 판매가={sale_price:,} 할인={discount_rate}%")
+        return {"lprice": lprice_median, "is_deal": True, "discount_rate": discount_rate}
+    elif lprice_median <= sale_price * 1.05:
+        logger.info(f"[check_price_vs_naver] 딜 아님: {clean[:30]} | 네이버={lprice_median:,} 판매가={sale_price:,}")
+        return {"lprice": lprice_median, "is_deal": False, "discount_rate": 0.0}
+    else:
+        # 1.05 < lprice <= 1.10: 애매한 구간 → 통과 (할인율 계산은 하지 않음)
+        return {"lprice": lprice_median, "is_deal": True, "discount_rate": 0.0}
