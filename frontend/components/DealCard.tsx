@@ -201,6 +201,10 @@ export default function DealCard({ deal, onClick }: DealCardProps) {
           <p className="text-[11px] text-amber-600 mt-0.5 font-medium">
             현재가 {formatPrice(deal.verified_price)}
           </p>
+        ) : deal.source === "community" && deal.discount_rate > 0 && deal.original_price > 0 ? (
+          <p className="text-[11px] text-indigo-600 font-semibold mt-0.5">
+            네이버 최저가 대비 -{Math.round(deal.discount_rate)}% ↓
+          </p>
         ) : saved > 100 ? (
           <p className="text-[11px] text-emerald-600 font-semibold mt-0.5">
             {formatPrice(saved)} 절약 ↓
@@ -238,7 +242,7 @@ export default function DealCard({ deal, onClick }: DealCardProps) {
           onClick={(e) => { e.stopPropagation(); trackEvent("outbound_click", deal.id); }}
           className="block mt-2 text-center border border-gray-200 text-[12px] font-semibold py-2 text-gray-700 hover:border-gray-900 hover:text-black transition-colors"
         >
-          {isFree ? "받으러 가기" : "지금 최저가 구매"}
+          {isFree ? "받으러 가기" : deal.source === "community" ? "딜 보러가기" : "지금 최저가 구매"}
         </a>
       </div>
     </div>
