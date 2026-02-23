@@ -59,7 +59,7 @@ def _map_category(naver_category: str) -> str:
 
 async def search_with_real_discount(keyword: str, display: int = 20) -> list[dict]:
     """
-    네이버 쇼핑 검색 — hprice > lprice 인 상품만 반환 (진짜 할인)
+    네이버 쇼핑 검색 — hprice 우선, 없으면 lprice 중앙값 비교로 할인 감지
     """
     if not settings.NAVER_CLIENT_ID:
         return []
@@ -87,6 +87,18 @@ async def search_with_real_discount(keyword: str, display: int = 20) -> list[dic
             print(f"네이버 API 오류 [{keyword}]: {e}")
             return []
 
+    # 중앙값 계산용: 전체 결과의 lprice 목록
+    all_lprices = [
+        int(i.get("lprice", 0) or 0)
+        for i in items
+        if int(i.get("lprice", 0) or 0) >= MIN_PRICE
+    ]
+    if len(all_lprices) >= 3:
+        sorted_all = sorted(all_lprices)
+        median_price = sorted_all[len(sorted_all) // 2]
+    else:
+        median_price = 0
+
     deals = []
     for item in items:
         title = _strip_html(item.get("title", ""))
@@ -96,13 +108,21 @@ async def search_with_real_discount(keyword: str, display: int = 20) -> list[dic
         if lprice <= 0 or lprice < MIN_PRICE:
             continue
 
-        # hprice(정가)가 있으면 실제 할인율, 없으면 수집은 하되 할인율 0
+        ref_price = 0
+
+        # hprice 우선, 없으면 검색 결과 중앙값으로 대체
         if hprice > 0 and hprice > lprice:
+            ref_price = hprice
             discount_rate = round((1 - lprice / hprice) * 100, 1)
             if discount_rate < MIN_DISCOUNT_RATE:
                 continue
         else:
-            discount_rate = 0.0  # 할인율 불명 → 수집은 하되 뱃지 미표시
+            # 같은 검색 결과에서 lprice들의 중앙값 계산
+            if median_price > 0 and median_price > lprice * 1.12:  # 중앙값보다 12% 이상 저렴
+                ref_price = median_price
+                discount_rate = round((1 - lprice / median_price) * 100, 1)
+            else:
+                continue  # 유의미한 할인 아님 or 비교 데이터 부족
 
         # ★ 카탈로그 URL 우선: productType=1이면 네이버 최저가 비교 페이지로 연결
         # → 사용자가 클릭하면 항상 현재 최저가가 표시됨 (가격 불일치 방지)
@@ -115,7 +135,7 @@ async def search_with_real_discount(keyword: str, display: int = 20) -> list[dic
 
         deals.append({
             "title": title,
-            "original_price": float(hprice) if hprice > 0 else float(lprice),
+            "original_price": float(ref_price),
             "sale_price": float(lprice),
             "discount_rate": discount_rate,
             "image_url": item.get("image", ""),
