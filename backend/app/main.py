@@ -9,7 +9,7 @@ from slowapi.errors import RateLimitExceeded
 from app.rate_limit import limiter
 
 from app.config import settings
-from app.routers import deals, stats, verify
+from app.routers import deals, stats, verify, feed
 from app.routers import admin as admin_router
 from app.scheduler import start_scheduler, stop_scheduler
 import app.db_supabase as db
@@ -45,6 +45,7 @@ app.include_router(deals.router)
 app.include_router(stats.router)
 app.include_router(verify.router)
 app.include_router(admin_router.router)
+app.include_router(feed.router)
 
 
 # ──────────────────────────────────────────

@@ -53,6 +53,8 @@ export default async function RootLayout({
     <html lang="ko">
       <head>
         <meta name="theme-color" content="#E31E24" />
+        {/* TODO: 네이버 서치어드바이저 인증코드 — https://searchadvisor.naver.com 에서 발급 후 교체 */}
+        <meta name="naver-site-verification" content="NAVER_VERIFICATION_CODE_HERE" />
         {/* Google AdSense - 정적 HTML에 삽입해 Google 크롤러 검증 통과 */}
         {/* eslint-disable-next-line @next/next/no-sync-scripts */}
         <script

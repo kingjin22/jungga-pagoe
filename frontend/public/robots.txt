@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+
+# Google
+User-agent: Googlebot
+Allow: /
+
+# Naver
+User-agent: Yeti
+Allow: /
+
+Sitemap: https://jungga-pagoe.vercel.app/sitemap.xml
