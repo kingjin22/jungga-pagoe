@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getAdminMetrics, AdminMetrics } from "@/lib/admin-api";
+import { getAdminMetrics, AdminMetrics, getPipelineStats, PipelineStats } from "@/lib/admin-api";
 
 /* ── SVG 라인 차트 ── */
 function LineChart({
@@ -87,9 +87,11 @@ const SOURCE_COLOR: Record<string, string> = {
 
 export default function AdminDashboardPage() {
   const [metrics, setMetrics] = useState<AdminMetrics | null>(null);
+  const [pipeline, setPipeline] = useState<PipelineStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState<"pv" | "clicks" | "deal_opens">("pv");
+  const [pipelineLoading, setPipelineLoading] = useState(true);
 
   useEffect(() => {
     const load = () =>
@@ -99,6 +101,17 @@ export default function AdminDashboardPage() {
         .finally(() => setLoading(false));
     load();
     const timer = setInterval(load, 30_000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    const loadPipeline = () =>
+      getPipelineStats()
+        .then(setPipeline)
+        .catch(() => {})
+        .finally(() => setPipelineLoading(false));
+    loadPipeline();
+    const timer = setInterval(loadPipeline, 60_000);
     return () => clearInterval(timer);
   }, []);
 
@@ -177,6 +190,26 @@ export default function AdminDashboardPage() {
         />
       </div>
 
+      {/* 파이프라인 현황 */}
+      <div className="bg-white border border-gray-200 p-5 mb-6">
+        <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-100">
+          <h2 className="text-sm font-bold text-gray-900">파이프라인 현황 (최근 24h)</h2>
+          <button
+            onClick={() => { setPipelineLoading(true); getPipelineStats().then(setPipeline).catch(() => {}).finally(() => setPipelineLoading(false)); }}
+            className="text-[10px] text-gray-400 hover:text-gray-700 px-2 py-1 border border-gray-200 rounded"
+          >
+            새로고침
+          </button>
+        </div>
+        {pipelineLoading ? (
+          <p className="text-xs text-gray-400 py-3">로딩 중...</p>
+        ) : pipeline ? (
+          <PipelineTable pipeline={pipeline} />
+        ) : (
+          <p className="text-xs text-gray-400 py-3">데이터 없음</p>
+        )}
+      </div>
+
       {/* 하단 2열 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* 딜 조회 순위 */}
@@ -227,6 +260,95 @@ export default function AdminDashboardPage() {
           <SourceBreakdown top10={metrics.top10} activeDeals={metrics.today.active_deals} />
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ── 파이프라인 테이블 ── */
+const SOURCE_LABEL: Record<string, string> = {
+  naver: "네이버",
+  community: "커뮤니티",
+  watchlist: "관심목록",
+  coupang: "쿠팡",
+  admin: "수동등록",
+};
+
+function PipelineTable({ pipeline }: { pipeline: PipelineStats }) {
+  const allSources = Array.from(
+    new Set([
+      ...Object.keys(pipeline.sources),
+      ...Object.keys(pipeline.active_by_source),
+    ])
+  ).sort();
+
+  return (
+    <div>
+      {/* 총 active 강조 */}
+      <div className="flex items-end gap-2 mb-4">
+        <span className="text-3xl font-black text-gray-900">{pipeline.total_active.toLocaleString()}</span>
+        <span className="text-sm text-gray-400 mb-1">개 active</span>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs border-collapse">
+          <thead>
+            <tr className="bg-gray-50">
+              <th className="text-left px-3 py-2 font-semibold text-gray-600 border border-gray-100 w-28">소스</th>
+              <th className="text-right px-3 py-2 font-semibold text-gray-600 border border-gray-100">24h 신규</th>
+              <th className="text-right px-3 py-2 font-semibold text-gray-600 border border-gray-100">Active</th>
+              <th className="text-right px-3 py-2 font-semibold text-gray-600 border border-gray-100">24h 만료</th>
+              <th className="text-right px-3 py-2 font-semibold text-gray-600 border border-gray-100">24h 검토중</th>
+            </tr>
+          </thead>
+          <tbody>
+            {allSources.map((src) => {
+              const s = pipeline.sources[src] || { total_24h: 0, active: 0, expired: 0, pending: 0 };
+              const activeTotal = pipeline.active_by_source[src] || 0;
+              return (
+                <tr key={src} className="hover:bg-gray-50">
+                  <td className="px-3 py-2 border border-gray-100 font-medium text-gray-800">
+                    {SOURCE_LABEL[src] || src}
+                  </td>
+                  <td className="px-3 py-2 border border-gray-100 text-right font-mono text-gray-700">
+                    {s.total_24h}
+                  </td>
+                  <td className="px-3 py-2 border border-gray-100 text-right font-mono font-bold text-green-700">
+                    {activeTotal}
+                  </td>
+                  <td className="px-3 py-2 border border-gray-100 text-right font-mono text-gray-500">
+                    {s.expired}
+                  </td>
+                  <td className="px-3 py-2 border border-gray-100 text-right font-mono text-gray-500">
+                    {s.pending}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+          <tfoot>
+            <tr className="bg-gray-50 font-bold">
+              <td className="px-3 py-2 border border-gray-100 text-gray-700">합계</td>
+              <td className="px-3 py-2 border border-gray-100 text-right font-mono text-gray-700">
+                {allSources.reduce((acc, s) => acc + (pipeline.sources[s]?.total_24h || 0), 0)}
+              </td>
+              <td className="px-3 py-2 border border-gray-100 text-right font-mono text-green-700">
+                {pipeline.total_active}
+              </td>
+              <td className="px-3 py-2 border border-gray-100 text-right font-mono text-gray-500">
+                {allSources.reduce((acc, s) => acc + (pipeline.sources[s]?.expired || 0), 0)}
+              </td>
+              <td className="px-3 py-2 border border-gray-100 text-right font-mono text-gray-500">
+                {allSources.reduce((acc, s) => acc + (pipeline.sources[s]?.pending || 0), 0)}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      {pipeline.generated_at && (
+        <p className="text-[10px] text-gray-400 mt-2">
+          생성: {new Date(pipeline.generated_at).toLocaleString("ko-KR")}
+        </p>
+      )}
     </div>
   );
 }

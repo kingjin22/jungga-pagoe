@@ -173,6 +173,27 @@ export async function rejectDeal(id: number, reason: string): Promise<{ id: numb
   });
 }
 
+// ── Pipeline Stats ─────────────────────────
+
+export interface PipelineSourceStat {
+  total_24h: number;
+  active: number;
+  expired: number;
+  pending: number;
+  active_total?: number;
+}
+
+export interface PipelineStats {
+  sources: Record<string, PipelineSourceStat>;
+  active_by_source: Record<string, number>;
+  total_active: number;
+  generated_at: string;
+}
+
+export async function getPipelineStats(): Promise<PipelineStats> {
+  return adminFetch<PipelineStats>("/admin/pipeline-stats");
+}
+
 export function adminLogin(key: string): void {
   if (typeof window !== "undefined") {
     localStorage.setItem("admin_key", key);

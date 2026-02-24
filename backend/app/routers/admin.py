@@ -579,3 +579,49 @@ async def parse_product_url_endpoint(
     from app.services.url_parser import parse_product_url
     result = await parse_product_url(url)
     return result.to_dict()
+
+
+# ──────────────────────────────────────────
+# Pipeline Stats
+# ──────────────────────────────────────────
+
+@router.get("/pipeline-stats")
+async def get_pipeline_stats(x_admin_key: Optional[str] = Header(None)):
+    """파이프라인별 수집 통계 — 소스별 24h 신규 딜 + 전체 active 수"""
+    verify_admin(x_admin_key)
+    from app.db_supabase import get_supabase
+    from datetime import datetime, timedelta, timezone
+    from collections import defaultdict
+
+    sb = get_supabase()
+    now = datetime.now(timezone.utc)
+    since_24h = (now - timedelta(hours=24)).isoformat()
+
+    # 24h 신규 딜 — 소스/상태별
+    res = sb.table("deals").select("source,status,created_at").gte("created_at", since_24h).execute()
+    rows = res.data or []
+
+    stats: dict = defaultdict(lambda: {"total_24h": 0, "active": 0, "expired": 0, "pending": 0})
+    for r in rows:
+        src = r.get("source", "unknown")
+        status = r.get("status", "unknown")
+        stats[src]["total_24h"] += 1
+        if status in ("active", "expired", "pending"):
+            stats[src][status] += 1
+
+    # 전체 active 딜 — 소스별
+    active_res = sb.table("deals").select("source").eq("status", "active").execute()
+    active_by_src: dict = defaultdict(int)
+    for r in (active_res.data or []):
+        active_by_src[r["source"]] += 1
+
+    # active 소스 목록을 stats에 병합 (24h 신규 없어도 active가 있는 소스 포함)
+    for src, cnt in active_by_src.items():
+        stats[src]["active_total"] = cnt
+
+    return {
+        "sources": {k: dict(v) for k, v in stats.items()},
+        "active_by_source": dict(active_by_src),
+        "total_active": sum(active_by_src.values()),
+        "generated_at": now.isoformat(),
+    }
