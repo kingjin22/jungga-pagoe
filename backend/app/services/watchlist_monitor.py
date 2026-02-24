@@ -107,7 +107,8 @@ def _strip_html(text: str) -> str:
 
 
 async def _naver_lprice(query: str, client: httpx.AsyncClient) -> tuple[int, int, str | None]:
-    """(lprice, hprice, image_url) — 실패 시 (0, 0, None)"""
+    """(lprice, 0, image_url) — hprice는 Naver API가 반환 중단하여 항상 0
+    실패 시 (0, 0, None)"""
     if not settings.NAVER_CLIENT_ID:
         return 0, 0, None
     try:
@@ -121,12 +122,12 @@ async def _naver_lprice(query: str, client: httpx.AsyncClient) -> tuple[int, int
             timeout=8,
         )
         items = resp.json().get("items", [])
-        prices = [(int(i.get("lprice", 0)), int(i.get("hprice", 0)), i.get("image")) for i in items if i.get("lprice")]
+        prices = [(int(i.get("lprice", 0)), i.get("image")) for i in items if i.get("lprice")]
         if not prices:
             return 0, 0, None
         # 최저가 기준 정렬
         prices.sort(key=lambda x: x[0])
-        return prices[0][0], prices[0][1], prices[0][2]
+        return prices[0][0], 0, prices[0][1]
     except Exception as e:
         logger.debug(f"[워치리스트] Naver 조회 실패 ({query}): {e}")
         return 0, 0, None
@@ -286,10 +287,11 @@ async def run_watchlist_monitor():
                 }).eq("id", item["id"]).execute()
 
                 # ── 딜 조건 판단 ───────────────────────────
-                # 기준가: msrp > 0이면 msrp, 없으면 avg_30d
-                base_price = item["msrp"] if item["msrp"] > 0 else avg
-                if base_price <= 0 or lprice <= 0:
-                    continue
+                # 기준가: msrp → avg_30d(실시간) → avg_30d_lprice(DB저장값) 순서로 fallback
+                ref = item.get("msrp") or avg or item.get("avg_30d_lprice") or 0
+                if ref <= 0:
+                    continue  # 비교 기준 없음
+                base_price = ref
 
                 # 최소 가격 검증 (가품 의심 방지)
                 if item["min_price"] > 0 and lprice < item["min_price"]:
