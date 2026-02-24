@@ -1,10 +1,13 @@
 export default function DealCardSkeleton() {
   return (
     <div className="animate-pulse">
-      <div className="aspect-square bg-gray-200 rounded mb-2" />
-      <div className="h-3 bg-gray-200 rounded mb-1" />
-      <div className="h-3 bg-gray-200 rounded w-3/4 mb-2" />
-      <div className="h-4 bg-gray-200 rounded w-1/2" />
+      <div className="bg-gray-200 aspect-square w-full mb-2 rounded" />
+      <div className="space-y-2 px-0.5">
+        <div className="h-3 bg-gray-200 rounded w-1/3" />
+        <div className="h-4 bg-gray-200 rounded w-full" />
+        <div className="h-4 bg-gray-200 rounded w-4/5" />
+        <div className="h-5 bg-gray-200 rounded w-2/5 mt-2" />
+      </div>
     </div>
   );
 }

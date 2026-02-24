@@ -186,7 +186,7 @@ export default function DealCard({ deal, onClick, onDismiss }: DealCardProps) {
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
-      className="deal-card group relative cursor-pointer"
+      className="deal-card group relative cursor-pointer hover:shadow-md transition-shadow duration-200"
       onClick={handleCardClick}
     >
       {/* 왼쪽 스와이프 힌트 (빨간 X) */}
@@ -217,7 +217,7 @@ export default function DealCard({ deal, onClick, onDismiss }: DealCardProps) {
             alt={deal.title}
             fill
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
-            className="object-cover"
+            className="object-cover group-hover:scale-105 transition-transform duration-300"
             onError={() => setImgError(true)}
           />
         ) : (

@@ -13,6 +13,7 @@ import TrendingSection from "@/components/TrendingSection";
 import PriceFilter from "@/components/PriceFilter";
 import RecentDeals from "@/components/RecentDeals";
 import { DealGridSkeleton } from "@/components/DealCardSkeleton";
+import TodayBest from "@/components/TodayBest";
 
 interface SearchParams {
   sort?: string;
@@ -134,6 +135,13 @@ export default async function HomePage({
 
         {/* 최근 본 딜 */}
         {!isFiltered && <RecentDeals />}
+
+        {/* 오늘의 베스트딜 */}
+        {!isFiltered && (
+          <Suspense fallback={null}>
+            <TodayBest />
+          </Suspense>
+        )}
 
         {/* 딜 그리드 (무한 스크롤) */}
         {dealsData.items.length === 0 ? (
