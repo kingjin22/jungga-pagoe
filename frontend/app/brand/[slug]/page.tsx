@@ -63,6 +63,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   return {
     title: `${brand} 최저가 할인 모음 | 정가파괴`,
     description: `${brand} 공식 정가 대비 최저가 ${count}개 딜. ${BRAND_DESC[brand] || `${brand} 제품의 최저가를 실시간으로 추적합니다.`}`,
+    keywords: `${brand} 최저가, ${brand} 할인, ${brand} 특가, ${brand} 세일`,
     openGraph: {
       title: `${brand} 최저가 | 정가파괴`,
       description: `${brand} 현재 할인 딜 ${count}개`,

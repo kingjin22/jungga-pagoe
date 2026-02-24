@@ -29,7 +29,8 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
     return {
       title: `${title} ${price} ${dr > 0 ? `-${dr}%` : ""} | 정가파괴`,
-      description: `${deal.title} 현재 ${price}${dr > 0 ? ` (${dr}% 할인)` : ""}. 공식 정가 대비 최저가 확인 및 가격 히스토리 제공.`,
+      description: `${deal.title} 최저가 ${deal.sale_price.toLocaleString()}원 (정가 ${deal.original_price.toLocaleString()}원 대비 ${dr}% 할인). 정가 기준 실제 할인 딜만 모은 정가파괴에서 확인하세요.`,
+      keywords: `${title}, 최저가, 할인, 특가, ${deal.category}`,
       openGraph: {
         title: `${title} ${price}${dr > 0 ? ` -${dr}%` : ""}`,
         description: `정가파괴 | ${deal.category} 최저가`,
@@ -74,19 +75,21 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
     "@type": "Product",
     name: cleanTitle,
     image: deal.image_url ? [deal.image_url] : undefined,
-    description: `${cleanTitle} 최저가 ${formatPrice(deal.sale_price)}${dr > 0 ? ` (정가 ${formatPrice(deal.original_price)} 대비 ${dr}% 할인)` : ""}. 정가파괴에서 가격 히스토리를 확인하세요.`,
-    ...(retailer && {
-      brand: { "@type": "Brand", name: retailer },
-    }),
+    description: `${dr}% 할인 | 정가 ${formatPrice(deal.original_price)}원 → ${formatPrice(deal.sale_price)}원 | 정가파괴`,
+    brand: {
+      "@type": "Brand",
+      name: retailer || deal.category,
+    },
     category: deal.category,
     offers: {
       "@type": "Offer",
       price: deal.sale_price,
       priceCurrency: "KRW",
       availability: "https://schema.org/InStock",
-      url: `${BASE_URL}/deal/${id}`,
+      url: targetUrl || `${BASE_URL}/deal/${id}`,
       priceValidUntil,
-      seller: { "@type": "Organization", name: retailer || "온라인 쇼핑몰" },
+      validFrom: deal.created_at,
+      seller: { "@type": "Organization", name: "정가파괴" },
     },
   };
 
