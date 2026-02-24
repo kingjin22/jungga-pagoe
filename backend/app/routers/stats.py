@@ -79,6 +79,49 @@ async def get_brands():
     return result
 
 
+@router.get("/brands/{slug}/lowest-ever")
+async def get_brand_lowest_ever(slug: str):
+    """브랜드의 역대 최저 등록 딜 (만료 포함, sale_price 기준 상위 5개)"""
+    import re
+    sb = db.get_supabase()
+
+    def to_slug(name: str) -> str:
+        return re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-')
+
+    # submitter_name 기반으로 브랜드명 찾기
+    all_brands_res = (
+        sb.table("deals")
+        .select("submitter_name,title")
+        .in_("status", ["active", "expired", "price_changed"])
+        .limit(500)
+        .execute()
+        .data
+    )
+    found_brand = None
+    for d in all_brands_res:
+        brand = d.get("submitter_name") or ""
+        if not brand:
+            m = re.match(r'^\[([^\]]+)\]', d.get("title", ""))
+            brand = m.group(1).strip() if m else ""
+        if brand and to_slug(brand) == slug:
+            found_brand = brand
+            break
+
+    if not found_brand:
+        return []
+
+    res = (
+        sb.table("deals")
+        .select("id,title,sale_price,original_price,discount_rate,image_url,product_url,affiliate_url,source,category,status,submitter_name,created_at,is_hot")
+        .ilike("title", f"%{found_brand}%")
+        .in_("status", ["active", "expired", "price_changed"])
+        .order("sale_price", desc=False)
+        .limit(5)
+        .execute()
+    )
+    return [db._to_deal_dict(r) for r in (res.data or [])]
+
+
 @router.get("/brands/{slug}/top-deals")
 async def get_brand_top_deals(slug: str):
     """브랜드 역대 최저가 TOP 10 딜"""

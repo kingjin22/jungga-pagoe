@@ -347,7 +347,7 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
         )}
 
         {/* 관련 카테고리 링크 */}
-        <div className="mt-12 pt-8 border-t border-gray-100">
+        <div className="mt-12 pt-8 border-t border-gray-100 pb-20 md:pb-0">
           <h2 className="text-sm font-bold text-gray-700 mb-3">{deal.category} 다른 딜 보기</h2>
           <Link
             href={`/?category=${encodeURIComponent(deal.category)}`}
@@ -364,6 +364,20 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
             </Link>
           )}
         </div>
+      </div>
+
+      {/* 모바일 sticky CTA */}
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-200 md:hidden z-40">
+        <a
+          href={targetUrl}
+          target="_blank"
+          rel="noopener noreferrer sponsored"
+          className="block w-full py-3 bg-[#E31E24] text-white text-center font-bold text-base"
+        >
+          {deal.product_url?.includes("coupang") ? "쿠팡에서 보기 🚀" :
+           deal.product_url?.includes("naver") ? "네이버쇼핑에서 보기" : "쇼핑몰에서 보기"}
+        </a>
+        <p className="text-[10px] text-gray-400 text-center mt-1">클릭 시 판매 사이트로 이동합니다</p>
       </div>
     </>
   );

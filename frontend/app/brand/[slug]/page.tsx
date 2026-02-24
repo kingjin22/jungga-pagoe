@@ -40,6 +40,12 @@ async function getBrandTopDeals(slug: string): Promise<{ brand: string | null; d
   return res.json();
 }
 
+async function getBrandLowestEver(slug: string): Promise<TopDeal[]> {
+  const res = await fetch(`${API_BASE}/api/brands/${slug}/lowest-ever`, { next: { revalidate: 600 } });
+  if (!res.ok) return [];
+  return res.json();
+}
+
 // 브랜드 설명 (SEO용 텍스트)
 const BRAND_DESC: Record<string, string> = {
   Apple: "아이폰, 맥북, 아이패드, 에어팟 등 Apple 정품의 최저가를 실시간으로 추적합니다. 공식 정가 대비 할인율을 투명하게 제공합니다.",
@@ -83,10 +89,11 @@ export default async function BrandPage({ params }: { params: Promise<{ slug: st
   }
 
   const { brand, count } = brandInfo;
-  const [dealsData, categories, topDealsResult] = await Promise.all([
+  const [dealsData, categories, topDealsResult, lowestDeals] = await Promise.all([
     getDeals({ page: 1, size: 40, sort: "discount", brand }),
     getCategories(),
     getBrandTopDeals(slug),
+    getBrandLowestEver(slug),
   ]);
   const topDeals = topDealsResult.deals;
 
@@ -127,6 +134,34 @@ export default async function BrandPage({ params }: { params: Promise<{ slug: st
         <div className="mb-6">
           <CategoryFilter categories={categories} />
         </div>
+
+        {/* 역대 최저 등록가 TOP 5 */}
+        {lowestDeals.length > 0 && (
+          <section className="mb-8">
+            <h2 className="text-base font-bold mb-3 text-gray-700">역대 최저 등록가</h2>
+            <div className="space-y-2">
+              {lowestDeals.map((d, i) => (
+                <div key={d.id} className="flex items-center gap-3 py-2 border-b border-gray-100">
+                  <span className="text-xs font-bold text-[#E31E24] w-5">#{i + 1}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm truncate">{d.title}</p>
+                    <p className="text-xs text-gray-400">
+                      {d.created_at ? new Date(d.created_at).toLocaleDateString("ko-KR") : ""}
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    {d.sale_price != null && (
+                      <p className="text-sm font-bold">{d.sale_price.toLocaleString()}원</p>
+                    )}
+                    {d.discount_rate != null && (
+                      <p className="text-xs text-[#E31E24]">-{d.discount_rate.toFixed(0)}%</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* 딜 그리드 */}
         {dealsData.items.length > 0 ? (
