@@ -30,6 +30,27 @@ async def get_hot_deals():
     return db.get_hot_deals(limit=10)
 
 
+@router.get("/{deal_id}/related")
+async def get_related_deals(deal_id: int):
+    """같은 카테고리에서 최신 3개 추천 (자기 자신 제외)"""
+    sb = db.get_supabase()
+    cur = sb.table("deals").select("category").eq("id", deal_id).limit(1).execute()
+    if not cur.data:
+        return []
+    category = cur.data[0].get("category", "기타")
+    res = (
+        sb.table("deals")
+        .select("id,title,sale_price,original_price,discount_rate,image_url,source,category,is_hot,created_at,affiliate_url,product_url,status,upvotes,views,submitter_name,expires_at,verified_price,last_verified_at,updated_at")
+        .eq("status", "active")
+        .eq("category", category)
+        .neq("id", deal_id)
+        .order("created_at", desc=True)
+        .limit(3)
+        .execute()
+    )
+    return [db._to_deal_dict(r) for r in (res.data or [])]
+
+
 @router.get("/{deal_id}")
 async def get_deal(deal_id: int):
     deal = db.get_deal_by_id(deal_id)

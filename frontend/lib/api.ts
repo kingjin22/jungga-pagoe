@@ -173,3 +173,9 @@ export async function getDeal(id: number): Promise<Deal & { price_stats?: any; t
   if (!res.ok) throw new Error("딜 불러오기 실패");
   return res.json();
 }
+
+export async function getRelatedDeals(id: number): Promise<Deal[]> {
+  const res = await fetch(`${API_BASE}/api/deals/${id}/related`, { next: { revalidate: 300 } });
+  if (!res.ok) return [];
+  return res.json();
+}

@@ -2,8 +2,9 @@ import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { getDeal, formatPrice } from "@/lib/api";
+import { getDeal, getRelatedDeals, formatPrice } from "@/lib/api";
 import PriceChart from "@/components/PriceChart";
+import DealCard from "@/components/DealCard";
 
 const BASE_URL = "https://jungga-pagoe.vercel.app";
 
@@ -50,6 +51,8 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
   } catch {
     notFound();
   }
+
+  const relatedDeals = await getRelatedDeals(Number(id));
 
   if (!deal || deal.status === "expired") notFound();
 
@@ -239,6 +242,22 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
             <p className="text-[11px] text-gray-300 text-center mt-3">조회 {deal.views?.toLocaleString() || 0}회</p>
           </div>
         </div>
+
+        {/* 관련 딜 */}
+        {relatedDeals.length > 0 && (
+          <section className="mt-10 border-t pt-6">
+            <h2 className="text-[15px] font-bold text-gray-900 mb-4">
+              {deal.category} 관련 딜
+            </h2>
+            <div className="grid grid-cols-3 gap-3">
+              {relatedDeals.map((r) => (
+                <Link key={r.id} href={`/deal/${r.id}`}>
+                  <DealCard deal={r} />
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* 관련 카테고리 링크 */}
         <div className="mt-12 pt-8 border-t border-gray-100">
