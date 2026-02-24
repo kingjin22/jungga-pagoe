@@ -510,7 +510,7 @@ def get_admin_deals(
     if source:
         query = query.eq("source", source)
     if search:
-        query = query.ilike("title", f"%{search}%")
+        query = query.or_(f"title.ilike.%{search}%,brand.ilike.%{search}%")
     if pinned is not None:
         query = query.eq("pinned", pinned)
 

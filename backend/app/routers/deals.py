@@ -30,6 +30,38 @@ async def get_hot_deals():
     return db.get_hot_deals(limit=10)
 
 
+@router.get("/suggestions")
+async def get_suggestions(q: str = ""):
+    """검색어 자동완성 — 브랜드명 + 카테고리 + 제목에서 추출"""
+    if len(q) < 1:
+        return []
+    sb = db.get_supabase()
+    res = (
+        sb.table("deals")
+        .select("title,brand,category")
+        .eq("status", "active")
+        .or_(f"title.ilike.%{q}%,brand.ilike.%{q}%")
+        .limit(20)
+        .execute()
+    )
+
+    seen: set = set()
+    suggestions = []
+    for row in (res.data or []):
+        brand_val = row.get("brand")
+        cat_val = row.get("category")
+        for val, stype in [(brand_val, "brand"), (cat_val, "category")]:
+            if val and q.lower() in val.lower() and val not in seen:
+                seen.add(val)
+                suggestions.append({"type": stype, "value": val})
+        title = row.get("title", "")
+        short = " ".join(title.split()[:3])[:20]
+        if short and q.lower() in short.lower() and short not in seen:
+            seen.add(short)
+            suggestions.append({"type": "title", "value": short})
+    return suggestions[:8]
+
+
 @router.get("/{deal_id}/related")
 async def get_related_deals(deal_id: int):
     """같은 카테고리에서 최신 3개 추천 (자기 자신 제외)"""

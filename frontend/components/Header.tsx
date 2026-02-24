@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import SearchBar from "@/components/SearchBar";
 
 // 소스 필터는 고정 (출처 기반)
 const SOURCE_LINKS = [
@@ -18,23 +19,12 @@ interface HeaderProps {
 }
 
 export default function Header({ categories = [] }: HeaderProps) {
-  const [search, setSearch] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
-  const router = useRouter();
   const searchParams = useSearchParams();
 
   const currentCategory = searchParams.get("category") || "";
   const currentSource = searchParams.get("source") || "";
   const isHotOnly = searchParams.get("hot_only") === "true";
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (search.trim()) {
-      router.push(`/?search=${encodeURIComponent(search.trim())}`);
-      setSearchOpen(false);
-      setSearch("");
-    }
-  };
 
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-gray-200">
@@ -68,22 +58,9 @@ export default function Header({ categories = [] }: HeaderProps) {
 
         {searchOpen && (
           <div className="border-t border-gray-700">
-            <form onSubmit={handleSearch} className="max-w-screen-xl mx-auto px-4 py-3 flex gap-2">
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="브랜드, 카테고리, 제품명 검색..."
-                autoFocus
-                className="flex-1 bg-[#222] text-white placeholder-gray-500 px-4 py-2 text-sm border border-gray-600 focus:border-gray-400 outline-none"
-              />
-              <button
-                type="submit"
-                className="bg-white text-black px-5 py-2 text-sm font-semibold hover:bg-gray-100 transition-colors"
-              >
-                검색
-              </button>
-            </form>
+            <div className="max-w-screen-xl mx-auto px-4 py-3 flex gap-2">
+              <SearchBar onClose={() => setSearchOpen(false)} />
+            </div>
           </div>
         )}
       </div>
