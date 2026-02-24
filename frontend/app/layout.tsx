@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import Script from "next/script";
 import "./globals.css";
 import Header from "@/components/Header";
+import BottomNav from "@/components/BottomNav";
 import { getCategories } from "@/lib/api";
 
 export const metadata: Metadata = {
@@ -83,7 +84,7 @@ export default async function RootLayout({
         <Suspense fallback={<div className="h-14 bg-white border-b border-gray-200" />}>
           <Header categories={categoryNames} />
         </Suspense>
-        <main>{children}</main>
+        <main className="pb-14 md:pb-0">{children}</main>
         <footer className="border-t border-gray-200 mt-16">
           <div className="max-w-screen-xl mx-auto px-4 py-10">
             <div className="flex flex-col md:flex-row justify-between gap-6">
@@ -116,6 +117,7 @@ export default async function RootLayout({
             </div>
           </div>
         </footer>
+      <BottomNav />
       <Analytics />
       </body>
     </html>
