@@ -39,9 +39,9 @@ async def get_suggestions(q: str = ""):
     sb = db.get_supabase()
     res = (
         sb.table("deals")
-        .select("title,brand,category")
+        .select("title,category,submitter_name")
         .eq("status", "active")
-        .or_(f"title.ilike.%{q}%,brand.ilike.%{q}%")
+        .ilike("title", f"%{q}%")
         .limit(20)
         .execute()
     )
@@ -49,12 +49,12 @@ async def get_suggestions(q: str = ""):
     seen: set = set()
     suggestions = []
     for row in (res.data or []):
-        brand_val = row.get("brand")
+        # 카테고리 매칭
         cat_val = row.get("category")
-        for val, stype in [(brand_val, "brand"), (cat_val, "category")]:
-            if val and q.lower() in val.lower() and val not in seen:
-                seen.add(val)
-                suggestions.append({"type": stype, "value": val})
+        if cat_val and q.lower() in cat_val.lower() and cat_val not in seen:
+            seen.add(cat_val)
+            suggestions.append({"type": "category", "value": cat_val})
+        # 제목 앞 3단어
         title = row.get("title", "")
         short = " ".join(title.split()[:3])[:20]
         if short and q.lower() in short.lower() and short not in seen:
