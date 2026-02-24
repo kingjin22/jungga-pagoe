@@ -9,6 +9,7 @@ import { trackEvent } from "@/lib/tracking";
 interface DealCardProps {
   deal: Deal;
   onClick?: (deal: Deal) => void;
+  onDismiss?: (dealId: number) => void;
 }
 
 const CATEGORY_EMOJI: Record<string, string> = {
@@ -57,11 +58,17 @@ function extractRetailer(title: string, submitterName?: string): string {
   return "";
 }
 
-export default function DealCard({ deal, onClick }: DealCardProps) {
+export default function DealCard({ deal, onClick, onDismiss }: DealCardProps) {
   const [upvotes, setUpvotes] = useState(deal.upvotes);
   const [voted, setVoted] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const impressedRef = useRef(false);
+
+  // 스와이프 상태
+  const [swipeX, setSwipeX] = useState(0);
+  const [isDismissing, setIsDismissing] = useState(false);
+  const touchStartX = useRef<number | null>(null);
+  const SWIPE_THRESHOLD = 80; // px
 
   // 카드 노출 트래킹 (IntersectionObserver)
   useEffect(() => {
@@ -107,8 +114,65 @@ export default function DealCard({ deal, onClick }: DealCardProps) {
     onClick?.(deal);
   };
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const dx = e.touches[0].clientX - touchStartX.current;
+    setSwipeX(dx);
+  };
+
+  const handleTouchEnd = () => {
+    if (swipeX < -SWIPE_THRESHOLD) {
+      // 왼쪽 스와이프 → dismiss
+      setIsDismissing(true);
+      setTimeout(() => onDismiss?.(deal.id), 300);
+    } else if (swipeX > SWIPE_THRESHOLD) {
+      // 오른쪽 스와이프 → 링크 열기
+      const url = deal.affiliate_url || deal.product_url;
+      if (url) window.open(url, "_blank", "noopener");
+    }
+    touchStartX.current = null;
+    setSwipeX(0);
+  };
+
   return (
-    <div ref={cardRef} className="deal-card group" onClick={handleCardClick}>
+    <div
+      ref={cardRef}
+      style={{
+        transform: isDismissing
+          ? "translateX(-110%)"
+          : `translateX(${swipeX * 0.6}px)`, // 저항감 (0.6 damping)
+        transition: swipeX === 0 || isDismissing ? "transform 0.3s ease" : "none",
+        opacity: isDismissing ? 0 : 1,
+      }}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      className="deal-card group relative cursor-pointer"
+      onClick={handleCardClick}
+    >
+      {/* 왼쪽 스와이프 힌트 (빨간 X) */}
+      {swipeX < -20 && (
+        <div
+          className="absolute inset-0 flex items-center justify-end pr-4 rounded-lg bg-red-50 pointer-events-none z-10"
+          style={{ opacity: Math.min(1, Math.abs(swipeX) / SWIPE_THRESHOLD) }}
+        >
+          <span className="text-2xl font-bold text-red-500">✕</span>
+        </div>
+      )}
+      {/* 오른쪽 스와이프 힌트 (초록 링크) */}
+      {swipeX > 20 && (
+        <div
+          className="absolute inset-0 flex items-center justify-start pl-4 rounded-lg bg-green-50 pointer-events-none z-10"
+          style={{ opacity: Math.min(1, swipeX / SWIPE_THRESHOLD) }}
+        >
+          <span className="text-2xl">🔗</span>
+        </div>
+      )}
+
       {/* 이미지 영역 */}
       <div className="relative overflow-hidden bg-gray-100 aspect-square">
         {deal.image_url ? (
