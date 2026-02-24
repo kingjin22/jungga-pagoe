@@ -6,6 +6,7 @@ import { getDeal, getRelatedDeals, formatPrice } from "@/lib/api";
 import PriceChart from "@/components/PriceChart";
 import PriceHistoryChart from "@/components/PriceHistoryChart";
 import DealCard from "@/components/DealCard";
+import ShareButtons from "@/components/ShareButtons";
 
 const BASE_URL = "https://jungga-pagoe.vercel.app";
 
@@ -231,6 +232,17 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
             >
               {isFree ? "지금 무료로 받기" : "지금 최저가 구매"}
             </a>
+
+            {/* 공유 버튼 */}
+            <div className="mb-3">
+              <ShareButtons
+                title={deal.title}
+                salePrice={deal.sale_price}
+                discountRate={deal.discount_rate}
+                imageUrl={deal.image_url}
+                dealUrl={`${BASE_URL}/deal/${id}`}
+              />
+            </div>
 
             <Link
               href="/"

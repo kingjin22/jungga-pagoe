@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import { Suspense } from "react";
+import Script from "next/script";
 import "./globals.css";
 import Header from "@/components/Header";
 import { getCategories } from "@/lib/api";
@@ -53,6 +54,18 @@ export default async function RootLayout({
           crossOrigin="anonymous"
         />
       </head>
+      {process.env.NEXT_PUBLIC_KAKAO_JS_KEY && (
+        <Script
+          src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js"
+          strategy="lazyOnload"
+          onLoad={() => {
+            const kakao = (window as any).Kakao;
+            if (kakao && !kakao.isInitialized()) {
+              kakao.init(process.env.NEXT_PUBLIC_KAKAO_JS_KEY);
+            }
+          }}
+        />
+      )}
       <body className="min-h-screen bg-white">
         <script
           type="application/ld+json"
