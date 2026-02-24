@@ -17,6 +17,29 @@ async function getBrandBySlug(slug: string) {
   return brands.find((b) => b.slug === slug) || null;
 }
 
+interface TopDeal {
+  id: string;
+  title: string;
+  sale_price: number | null;
+  original_price: number | null;
+  discount_rate: number | null;
+  image_url: string | null;
+  product_url: string | null;
+  affiliate_url: string | null;
+  source: string | null;
+  category: string | null;
+  status: string | null;
+  submitter_name: string | null;
+  created_at: string | null;
+  is_hot: boolean | null;
+}
+
+async function getBrandTopDeals(slug: string): Promise<{ brand: string | null; deals: TopDeal[] }> {
+  const res = await fetch(`${API_BASE}/api/brands/${slug}/top-deals`, { next: { revalidate: 600 } });
+  if (!res.ok) return { brand: null, deals: [] };
+  return res.json();
+}
+
 // 브랜드 설명 (SEO용 텍스트)
 const BRAND_DESC: Record<string, string> = {
   Apple: "아이폰, 맥북, 아이패드, 에어팟 등 Apple 정품의 최저가를 실시간으로 추적합니다. 공식 정가 대비 할인율을 투명하게 제공합니다.",
@@ -59,10 +82,12 @@ export default async function BrandPage({ params }: { params: Promise<{ slug: st
   }
 
   const { brand, count } = brandInfo;
-  const [dealsData, categories] = await Promise.all([
+  const [dealsData, categories, topDealsResult] = await Promise.all([
     getDeals({ page: 1, size: 40, sort: "discount", brand }),
     getCategories(),
+    getBrandTopDeals(slug),
   ]);
+  const topDeals = topDealsResult.deals;
 
   const desc = BRAND_DESC[brand] || `${brand} 제품의 공식 정가 대비 현재 최저가를 실시간으로 추적합니다.`;
 
@@ -108,6 +133,69 @@ export default async function BrandPage({ params }: { params: Promise<{ slug: st
         ) : (
           <div className="py-20 text-center text-gray-400">
             현재 {brand} 진행 중인 딜이 없습니다.
+          </div>
+        )}
+
+        {/* 역대 최저가 TOP 10 */}
+        {topDeals.length > 0 && (
+          <div className="mt-12">
+            <h2 className="text-lg font-bold text-gray-900 mb-4">🏆 역대 최저가 TOP 10</h2>
+            <div className="rounded-xl border border-gray-100 overflow-hidden">
+              <ol className="divide-y divide-gray-100">
+                {topDeals.map((deal, idx) => {
+                  const isActive = deal.status === "active" || deal.status === "price_changed";
+                  const href = deal.affiliate_url || deal.product_url || "#";
+                  const dateStr = deal.created_at
+                    ? new Date(deal.created_at).toLocaleDateString("ko-KR", { year: "2-digit", month: "numeric", day: "numeric" })
+                    : "";
+
+                  const inner = (
+                    <div className={`flex items-center gap-4 px-4 py-3 ${isActive ? "hover:bg-gray-50" : "opacity-50"}`}>
+                      {/* 순위 */}
+                      <span className={`w-6 text-center text-sm font-bold shrink-0 ${idx === 0 ? "text-yellow-500" : idx === 1 ? "text-gray-400" : idx === 2 ? "text-amber-700" : "text-gray-300"}`}>
+                        {idx + 1}
+                      </span>
+                      {/* 제품명 */}
+                      <span className="flex-1 text-sm text-gray-800 line-clamp-1 min-w-0">
+                        {deal.title}
+                      </span>
+                      {/* 할인율 */}
+                      {deal.discount_rate != null && (
+                        <span className="text-sm font-bold text-[#E31E24] shrink-0">
+                          -{Math.round(deal.discount_rate)}%
+                        </span>
+                      )}
+                      {/* 금액 */}
+                      {deal.sale_price != null && (
+                        <span className="text-sm font-semibold text-gray-900 shrink-0 w-24 text-right">
+                          {deal.sale_price.toLocaleString("ko-KR")}원
+                        </span>
+                      )}
+                      {/* 날짜 */}
+                      <span className="text-xs text-gray-400 shrink-0 w-16 text-right hidden sm:block">
+                        {dateStr}
+                      </span>
+                      {/* 상태 뱃지 */}
+                      {!isActive && (
+                        <span className="text-xs text-gray-400 shrink-0">종료</span>
+                      )}
+                    </div>
+                  );
+
+                  return (
+                    <li key={deal.id}>
+                      {isActive && href !== "#" ? (
+                        <a href={href} target="_blank" rel="noopener noreferrer" className="block">
+                          {inner}
+                        </a>
+                      ) : (
+                        inner
+                      )}
+                    </li>
+                  );
+                })}
+              </ol>
+            </div>
           </div>
         )}
       </div>

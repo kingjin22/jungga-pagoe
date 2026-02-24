@@ -77,3 +77,42 @@ async def get_brands():
             result.append({"brand": b, "slug": slug, "count": v["count"], "avg_discount": avg_dr})
 
     return result
+
+
+@router.get("/brands/{slug}/top-deals")
+async def get_brand_top_deals(slug: str):
+    """브랜드 역대 최저가 TOP 10 딜"""
+    import re
+    sb = db.get_supabase()
+
+    def to_slug(name: str) -> str:
+        return re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-')
+
+    # 전체 딜에서 submitter_name 기반으로 브랜드 탐색
+    all_deals = (
+        sb.table("deals")
+        .select("id,title,sale_price,original_price,discount_rate,image_url,product_url,affiliate_url,source,category,status,submitter_name,created_at,is_hot")
+        .order("discount_rate", desc=True)
+        .limit(500)
+        .execute()
+        .data
+    )
+
+    brand_deals = []
+    found_brand = None
+    for d in all_deals:
+        brand = d.get("submitter_name") or ""
+        if not brand:
+            m = re.match(r'^\[([^\]]+)\]', d.get("title", ""))
+            brand = m.group(1).strip() if m else ""
+        if brand and to_slug(brand) == slug:
+            found_brand = brand
+            brand_deals.append(d)
+
+    if not found_brand:
+        return {"brand": None, "deals": []}
+
+    # discount_rate 기준 TOP 10
+    top = sorted(brand_deals, key=lambda x: float(x.get("discount_rate") or 0), reverse=True)[:10]
+
+    return {"brand": found_brand, "deals": top}
