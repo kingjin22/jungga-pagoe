@@ -83,6 +83,24 @@ async def get_suggestions(q: str = ""):
     return suggestions[:8]
 
 
+@router.get("/weekly-top")
+async def get_weekly_top_deals():
+    """최근 7일 discount_rate 높은 순 TOP 10"""
+    from datetime import datetime, timedelta, timezone
+    sb = db.get_supabase()
+    since = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+    res = (
+        sb.table("deals")
+        .select("id,title,sale_price,original_price,discount_rate,image_url,source,category,is_hot,created_at,affiliate_url,product_url,status,views,upvotes,submitter_name,expires_at,verified_price,last_verified_at,updated_at")
+        .eq("status", "active")
+        .gte("created_at", since)
+        .order("discount_rate", desc=True)
+        .limit(10)
+        .execute()
+    )
+    return [db._to_deal_dict(r) for r in (res.data or [])]
+
+
 @router.get("/by-ids")
 async def get_deals_by_ids(ids: str = ""):
     """찜 목록용: 콤마구분 ID로 딜 조회"""

@@ -90,6 +90,14 @@ export async function getTrendingDeals(): Promise<Deal[]> {
   return res.json();
 }
 
+export async function getWeeklyTopDeals(): Promise<Deal[]> {
+  const res = await fetch(`${API_BASE}/api/deals/weekly-top`, {
+    next: { revalidate: 3600 },
+  });
+  if (!res.ok) throw new Error("주간 TOP10 불러오기 실패");
+  return res.json();
+}
+
 export async function upvoteDeal(id: number): Promise<{ upvotes: number; is_hot: boolean }> {
   const res = await fetch(`${API_BASE}/api/deals/${id}/upvote`, {
     method: "POST",

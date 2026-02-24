@@ -27,9 +27,16 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     const price = formatPrice(deal.sale_price);
     const title = deal.title.replace(/^\[[^\]]+\]\s*/, ""); // [브랜드] 제거
 
+    const origPrice = deal.original_price.toLocaleString();
+    const salePrice = deal.sale_price.toLocaleString();
+
     return {
-      title: `${title} ${price} ${dr > 0 ? `-${dr}%` : ""} | 정가파괴`,
-      description: `${deal.title} 최저가 ${deal.sale_price.toLocaleString()}원 (정가 ${deal.original_price.toLocaleString()}원 대비 ${dr}% 할인). 정가 기준 실제 할인 딜만 모은 정가파괴에서 확인하세요.`,
+      title: dr > 0
+        ? `${title} ${dr}% 할인 | 정가파괴`
+        : `${title} 특가 ${price} | 정가파괴`,
+      description: dr > 0
+        ? `${title} 정가 ${origPrice}원 → ${salePrice}원. ${dr}% 특가. 정가파괴에서 검증된 할인딜을 확인하세요.`
+        : `${title} 특가 ${salePrice}원. 정가파괴에서 검증된 할인딜을 확인하세요.`,
       keywords: `${title}, 최저가, 할인, 특가, ${deal.category}`,
       openGraph: {
         title: `${title} ${price}${dr > 0 ? ` -${dr}%` : ""}`,
