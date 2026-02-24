@@ -309,6 +309,7 @@ def get_stats() -> dict:
     coupang_count = sb.table("deals").select("id", count="exact").eq("source", "coupang").eq("status", "active").execute().count or 0
     naver_count = sb.table("deals").select("id", count="exact").eq("source", "naver").eq("status", "active").execute().count or 0
     community_count = sb.table("deals").select("id", count="exact").eq("source", "community").eq("status", "active").execute().count or 0
+    watchlist_count = sb.table("deals").select("id", count="exact").eq("source", "watchlist").eq("status", "active").execute().count or 0
 
     # 오늘 방문자 수 (page_view 이벤트)
     today_utc_end = (today_kst_start + timedelta(days=1)).astimezone(timezone.utc).isoformat()
@@ -336,7 +337,7 @@ def get_stats() -> dict:
         "total_deals": total,
         "hot_deals": hot,
         "last_updated_at": last_verified,
-        "by_source": {"coupang": coupang_count, "naver": naver_count, "community": community_count},
+        "by_source": {"coupang": coupang_count, "naver": naver_count, "community": community_count, "watchlist": watchlist_count},
         "today_added": today_added,
         "avg_discount": avg_discount,
         "expired": expired,

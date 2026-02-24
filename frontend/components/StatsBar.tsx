@@ -32,7 +32,7 @@ export default async function StatsBar() {
     { label: "평균 할인율", value: avgDiscount },
     { label: "오늘 등록", value: `${stats.today_added.toLocaleString()}개` },
     { label: "커뮤니티", value: `${(stats.by_source?.community || 0).toLocaleString()}개` },
-    { label: "네이버", value: `${(stats.by_source?.naver || 0).toLocaleString()}개` },
+    { label: "브랜드딜", value: `${((stats.by_source?.watchlist || 0) + (stats.by_source?.naver || 0)).toLocaleString()}개` },
   ];
 
   return (
