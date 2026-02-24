@@ -69,6 +69,29 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
 
   const priceValidUntil = new Date(Date.now() + 86400000 * 3).toISOString().split("T")[0];
 
+  // 남은 시간 계산 (created_at + 72h 기준)
+  const createdAt = deal.created_at ? new Date(deal.created_at).getTime() : Date.now();
+  const expiresAt = createdAt + 72 * 60 * 60 * 1000;
+  const remainingMs = expiresAt - Date.now();
+  const remainingHours = Math.max(0, Math.floor(remainingMs / (1000 * 60 * 60)));
+  const remainingMins = Math.max(0, Math.floor((remainingMs % (1000 * 60 * 60)) / (1000 * 60)));
+  const isExpiringSoon = remainingMs > 0 && remainingHours < 6;
+  const isActive = remainingMs > 0;
+
+  // 출처별 버튼 텍스트
+  const buyButtonText = (() => {
+    if (isFree) return "지금 무료로 받기";
+    const src = deal.source?.toLowerCase() || "";
+    if (src === "coupang") return "쿠팡 로켓배송 보기";
+    if (src === "naver") return "네이버 최저가 보기";
+    if (src === "11st") return "11번가에서 보기";
+    if (src === "gmarket") return "G마켓에서 보기";
+    if (src === "interpark") return "인터파크에서 보기";
+    if (src === "wemakeprice") return "위메프에서 보기";
+    if (src === "tmon") return "티몬에서 보기";
+    return "지금 최저가 구매";
+  })();
+
   // Product 스키마 — Google Shopping 리치 결과용
   const productJsonLd = {
     "@context": "https://schema.org",
@@ -226,14 +249,26 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
               </div>
             )}
 
+            {/* 남은 시간 */}
+            {isActive && (
+              <div className={`text-xs font-medium mb-3 px-3 py-1.5 rounded-sm ${
+                isExpiringSoon
+                  ? "bg-red-50 text-red-600 border border-red-100"
+                  : "bg-gray-50 text-gray-500 border border-gray-100"
+              }`}>
+                {isExpiringSoon ? "⚡ " : "⏱ "}
+                종료까지 {remainingHours > 0 ? `${remainingHours}시간 ` : ""}{remainingMins}분 남음
+              </div>
+            )}
+
             {/* 구매 버튼 */}
             <a
               href={targetUrl}
               target="_blank"
               rel="noopener noreferrer sponsored"
-              className="block w-full text-center bg-[#111] text-white font-bold py-4 text-sm hover:bg-[#333] transition-colors mb-3"
+              className="block w-full text-center bg-[#E31E24] text-white font-black py-4 text-base hover:bg-[#c01920] transition-colors mb-3 tracking-tight"
             >
-              {isFree ? "지금 무료로 받기" : "지금 최저가 구매"}
+              {buyButtonText} →
             </a>
 
             {/* 공유 버튼 */}
