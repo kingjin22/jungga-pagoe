@@ -64,8 +64,8 @@ export async function getDeals(params?: {
   if (params?.search) query.set("search", params.search);
   if (params?.hot_only) query.set("hot_only", "true");
   if (params?.brand) query.set("brand", params.brand);
-  if (params?.price_min) query.set("price_min", String(params.price_min));
-  if (params?.price_max) query.set("price_max", String(params.price_max));
+  if (params?.price_min != null) query.set("price_min", String(params.price_min));
+  if (params?.price_max != null) query.set("price_max", String(params.price_max));
 
   const res = await fetch(`${API_BASE}/api/deals?${query}`, {
     next: { revalidate: 30 },
