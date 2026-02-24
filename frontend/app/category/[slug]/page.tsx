@@ -1,4 +1,5 @@
 import { Metadata } from "next";
+import { Suspense } from "react";
 import { getDeals, getCategories } from "@/lib/api";
 import { CATEGORIES, getCategoryBySlug } from "@/lib/categories";
 import DealGrid from "@/components/DealGrid";
@@ -92,7 +93,9 @@ export default async function CategoryPage({
 
         {/* 카테고리 필터 */}
         <div className="mb-6">
-          <CategoryFilter categories={categories} />
+          <Suspense fallback={null}>
+            <CategoryFilter categories={categories} />
+          </Suspense>
         </div>
 
         {/* 딜 그리드 */}
