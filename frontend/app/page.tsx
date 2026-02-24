@@ -162,18 +162,20 @@ export default async function HomePage({
             />
           )}
 
-          <InfiniteDealsClient
-            initialDeals={dealsData.items}
-            filterParams={{
-              category: params.category,
-              source: params.source,
-              search: params.search,
-              sort: params.sort,
-              hot_only: params.hot_only,
-              price_min: params.price_min,
-              price_max: params.price_max,
-            }}
-          />
+          <Suspense fallback={<DealGridSkeleton count={20} />}>
+            <InfiniteDealsClient
+              initialDeals={dealsData.items}
+              filterParams={{
+                category: params.category,
+                source: params.source,
+                search: params.search,
+                sort: params.sort,
+                hot_only: params.hot_only,
+                price_min: params.price_min,
+                price_max: params.price_max,
+              }}
+            />
+          </Suspense>
           </>
         )}
 

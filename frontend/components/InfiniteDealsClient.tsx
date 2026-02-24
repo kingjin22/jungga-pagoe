@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { Deal } from "@/lib/api";
 import DealCard from "./DealCard";
 import DealModal from "./DealModal";
+import DealCardSkeleton from "./DealCardSkeleton";
 
 const PAGE_SIZE = 20;
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://jungga-pagoe-production.up.railway.app";
@@ -78,11 +79,15 @@ export default function InfiniteDealsClient({ initialDeals, filterParams }: Prop
         ))}
       </div>
 
+      {/* 추가 로딩 스켈레톤 */}
+      {loading && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-4 gap-y-8 mt-8">
+          {Array.from({ length: 10 }).map((_, i) => <DealCardSkeleton key={i} />)}
+        </div>
+      )}
+
       {/* IntersectionObserver 트리거 영역 */}
       <div ref={loaderRef} className="h-10 flex items-center justify-center mt-4">
-        {loading && (
-          <span className="text-[12px] text-gray-400">딜 불러오는 중...</span>
-        )}
         {!hasMore && deals.length > 0 && (
           <span className="text-[12px] text-gray-300">모든 딜을 확인했습니다</span>
         )}
