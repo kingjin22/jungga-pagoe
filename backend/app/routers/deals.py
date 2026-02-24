@@ -11,6 +11,7 @@ router = APIRouter(prefix="/api/deals", tags=["deals"])
 async def get_deals(
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
+    offset: Optional[int] = Query(None, ge=0),
     category: Optional[str] = None,
     source: Optional[str] = None,
     sort: str = Query("latest", pattern="^(latest|popular|discount|price_asc|price_desc)$"),
@@ -21,7 +22,7 @@ async def get_deals(
     return db.get_deals(
         page=page, size=size, category=category,
         source=source, sort=sort, search=search, hot_only=hot_only,
-        brand=brand,
+        brand=brand, offset=offset,
     )
 
 

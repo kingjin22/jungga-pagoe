@@ -58,6 +58,7 @@ def get_deals(
     search: str = None,
     hot_only: bool = False,
     brand: str = None,
+    offset: int = None,  # 직접 offset 지정 시 page 무시
 ) -> dict:
     sb = get_supabase()
     query = sb.table("deals").select("*", count="exact")
@@ -89,7 +90,8 @@ def get_deals(
     query = query.order(col, desc=not asc)
 
     # 페이지네이션
-    offset = (page - 1) * size
+    if offset is None:
+        offset = (page - 1) * size
     query = query.range(offset, offset + size - 1)
 
     res = query.execute()
