@@ -31,6 +31,24 @@ async def get_hot_deals():
     return db.get_hot_deals(limit=10)
 
 
+@router.get("/trending")
+async def get_trending_deals():
+    """최근 48h 내 조회수 TOP 3 딜"""
+    from datetime import datetime, timedelta, timezone
+    sb = db.get_supabase()
+    since = (datetime.now(timezone.utc) - timedelta(hours=48)).isoformat()
+    res = (
+        sb.table("deals")
+        .select("id,title,sale_price,original_price,discount_rate,image_url,source,category,is_hot,created_at,affiliate_url,product_url,status,views,upvotes,submitter_name,expires_at,verified_price,last_verified_at,updated_at")
+        .eq("status", "active")
+        .gte("created_at", since)
+        .order("views", desc=True)
+        .limit(3)
+        .execute()
+    )
+    return [db._to_deal_dict(r) for r in (res.data or [])]
+
+
 @router.get("/suggestions")
 async def get_suggestions(q: str = ""):
     """검색어 자동완성 — 브랜드명 + 카테고리 + 제목에서 추출"""

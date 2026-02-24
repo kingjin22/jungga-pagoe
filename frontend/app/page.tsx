@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { getDeals, getHotDeals, getCategories } from "@/lib/api";
+import { getDeals, getHotDeals, getCategories, getTrendingDeals } from "@/lib/api";
 import InfiniteDealsClient from "@/components/InfiniteDealsClient";
 import HotBanner from "@/components/HotBanner";
 import SortBar from "@/components/SortBar";
@@ -9,6 +9,7 @@ import PageViewTracker from "@/components/PageViewTracker";
 import AdBanner from "@/components/AdBanner";
 import Link from "next/link";
 import CoupangBanner from "@/components/CoupangBanner";
+import TrendingSection from "@/components/TrendingSection";
 
 interface SearchParams {
   sort?: string;
@@ -26,7 +27,7 @@ export default async function HomePage({
   const params = await searchParams;
   const isFiltered = !!(params.category || params.source || params.search || params.hot_only);
 
-  const [dealsData, hotDeals, categories] = await Promise.all([
+  const [dealsData, hotDeals, categories, trendingDeals] = await Promise.all([
     getDeals({
       page: 1,
       size: 20,
@@ -38,6 +39,7 @@ export default async function HomePage({
     }).catch(() => ({ items: [], total: 0, page: 1, size: 20, pages: 1 })),
     isFiltered ? Promise.resolve([]) : getHotDeals().catch(() => []),
     getCategories().catch(() => []),
+    isFiltered ? Promise.resolve([]) : getTrendingDeals().catch(() => []),
   ]);
 
   // ItemList 구조화 데이터 — Google 검색에 딜 목록 노출
@@ -112,6 +114,9 @@ export default async function HomePage({
         <Suspense fallback={null}>
           <SortBar total={dealsData.total} />
         </Suspense>
+
+        {/* 지금 인기 TOP 3 */}
+        {!isFiltered && <TrendingSection deals={trendingDeals} />}
 
         {/* 딜 그리드 (무한 스크롤) */}
         {dealsData.items.length === 0 ? (
