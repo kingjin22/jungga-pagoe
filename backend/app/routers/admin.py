@@ -498,6 +498,16 @@ async def update_coupang_token(
     }
 
 
+@router.post("/run-watchlist")
+async def run_watchlist_now(x_admin_key: Optional[str] = Header(None)):
+    """워치리스트 가격 모니터 즉시 실행"""
+    verify_admin(x_admin_key)
+    import asyncio
+    from app.services.watchlist_monitor import run_watchlist_monitor
+    asyncio.create_task(run_watchlist_monitor())
+    return {"status": "started", "message": "워치리스트 모니터 시작됨 (백그라운드)"}
+
+
 @router.post("/reprocess-community-deals")
 async def reprocess_community_deals(
     x_admin_key: Optional[str] = Header(None),
