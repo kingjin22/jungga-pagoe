@@ -120,7 +120,11 @@ export default async function HomePage({
         {dealsData.items.length === 0 ? (
           <div className="text-center py-24">
             <p className="text-gray-300 text-5xl mb-4">ø</p>
-            <p className="text-gray-500 text-sm">해당하는 딜이 없습니다</p>
+            <p className="text-gray-500 text-sm">
+              {params.search
+                ? "검색 결과가 없습니다. 다른 키워드로 시도해보세요."
+                : "해당하는 딜이 없습니다"}
+            </p>
             <Link
               href="/"
               className="mt-4 inline-block text-sm text-gray-900 underline underline-offset-2"

@@ -73,7 +73,7 @@ export default function Header({ categories = [] }: HeaderProps) {
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="브랜드, 상품명으로 검색"
+                placeholder="브랜드, 카테고리, 제품명 검색..."
                 autoFocus
                 className="flex-1 bg-[#222] text-white placeholder-gray-500 px-4 py-2 text-sm border border-gray-600 focus:border-gray-400 outline-none"
               />

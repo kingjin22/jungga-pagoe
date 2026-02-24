@@ -72,7 +72,7 @@ def get_deals(
     if hot_only:
         query = query.eq("is_hot", True)
     if search:
-        query = query.ilike("title", f"%{search}%")
+        query = query.or_(f"title.ilike.%{search}%,brand.ilike.%{search}%,category.ilike.%{search}%")
     if brand:
         # submitter_name 또는 title의 [Brand] 태그로 필터
         query = query.or_(f"submitter_name.ilike.%{brand}%,title.ilike.%[{brand}]%")
