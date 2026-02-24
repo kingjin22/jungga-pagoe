@@ -718,15 +718,24 @@ async def _cleanup_invalid_deals():
             }).eq("id", d["id"]).execute()
             logger.info(f"🗑 자동만료(할인<10%): #{d['id']} {d['title'][:35]} | {d['discount_rate']}%")
 
-        # 4) is_hot 동기화: 할인율 30% 이상인데 is_hot=False인 active 딜 수정
+        # 4) is_hot 동기화: 할인율 40% 이상 → HOT, 미만 → not HOT
         res4 = sb.table("deals").select("id,discount_rate") \
             .eq("status", "active") \
             .eq("is_hot", False) \
-            .gte("discount_rate", 30) \
+            .gte("discount_rate", 40) \
             .execute()
         for d in (res4.data or []):
             sb.table("deals").update({"is_hot": True}).eq("id", d["id"]).execute()
             logger.info(f"⭐ is_hot 동기화: #{d['id']} {d['discount_rate']}%")
+        # 할인율 40% 미만인데 HOT인 딜 해제
+        res4b = sb.table("deals").select("id,discount_rate") \
+            .eq("status", "active") \
+            .eq("is_hot", True) \
+            .lt("discount_rate", 40) \
+            .execute()
+        for d in (res4b.data or []):
+            sb.table("deals").update({"is_hot": False}).eq("id", d["id"]).execute()
+            logger.info(f"❄️ is_hot 해제: #{d['id']} {d['discount_rate']}%")
 
     except Exception as e:
         logger.error(f"❌ cleanup_invalid_deals 오류: {e}")

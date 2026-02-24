@@ -195,7 +195,7 @@ def create_deal(data: dict) -> dict:
     data.setdefault("status", "active")
     # is_hot: 외부에서 명시하지 않으면 할인율 기준으로 결정 (setdefault 아닌 강제 적용)
     if "is_hot" not in data:
-        data["is_hot"] = data.get("discount_rate", 0) >= 30
+        data["is_hot"] = data.get("discount_rate", 0) >= 40
     res = sb.table("deals").insert(data).execute()
     return _to_deal_dict(res.data[0])
 
