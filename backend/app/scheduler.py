@@ -628,9 +628,9 @@ def start_scheduler():
     )
     scheduler.add_job(
         _check_community_deal_expiry,
-        trigger=IntervalTrigger(minutes=30),
+        trigger=IntervalTrigger(minutes=10),
         id="community_expiry_check",
-        name="원글 만료 자동 감지 — 전체 딜 (30m)",
+        name="원글 만료 자동 감지 — 전체 딜 (10m)",
         replace_existing=True,
     )
     scheduler.add_job(

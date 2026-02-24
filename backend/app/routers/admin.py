@@ -625,3 +625,48 @@ async def get_pipeline_stats(x_admin_key: Optional[str] = Header(None)):
         "total_active": sum(active_by_src.values()),
         "generated_at": now.isoformat(),
     }
+
+
+@router.get("/expiry-stats")
+async def get_expiry_stats():
+    """최근 만료 딜 이유 태그 통계 (admin_note 기반)"""
+    import re
+    from collections import Counter
+    from datetime import datetime, timedelta
+
+    sb = db.get_supabase()
+    since_7d = (datetime.utcnow() - timedelta(days=7)).isoformat()
+
+    res = (
+        sb.table("deals")
+        .select("admin_note,source,created_at")
+        .eq("status", "expired")
+        .gte("updated_at", since_7d)
+        .limit(500)
+        .execute()
+    )
+    rows = res.data or []
+
+    # admin_note에서 이유 추출: "[자동만료] 원글 종료 감지: {reason}"
+    reason_pattern = re.compile(r'\[자동만료\].*?:\s*(.+)$')
+    reasons = Counter()
+    manual_expire = 0
+    for r in rows:
+        note = r.get("admin_note") or ""
+        m = reason_pattern.search(note)
+        if m:
+            reason = m.group(1).strip()[:30]
+            reasons[reason] += 1
+        elif note:
+            reasons["기타(관리자)"] += 1
+            manual_expire += 1
+        else:
+            reasons["이유미상"] += 1
+
+    return {
+        "period_days": 7,
+        "total_expired": len(rows),
+        "reason_breakdown": dict(reasons.most_common(15)),
+        "manual_expire_count": manual_expire,
+        "generated_at": datetime.utcnow().isoformat(),
+    }
