@@ -1,0 +1,26 @@
+{
+  "name": "정가파괴 — 핫딜 모음",
+  "short_name": "정가파괴",
+  "description": "브랜드 정가 대비 진짜 할인 딜만 모은 핫딜 사이트",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#E31E24",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["shopping"],
+  "lang": "ko"
+}

@@ -11,6 +11,7 @@ export const metadata: Metadata = {
   title: "정가파괴 - 핫딜 최저가 모음",
   description: "Apple, Samsung, Nike, Dyson 등 브랜드 공식 정가 대비 최저가를 실시간 추적. 뽐뿌·쿠팡·네이버 핫딜을 한곳에서 확인하세요.",
   keywords: ["핫딜", "최저가", "쿠팡 핫딜", "네이버 핫딜", "할인", "특가", "세일", "애플 할인", "나이키 최저가", "다이슨 할인"],
+  manifest: "/manifest.json",
   openGraph: {
     title: "정가파괴 - 핫딜 최저가 모음",
     description: "브랜드 공식 정가 대비 진짜 할인만 모은 핫딜 플랫폼",
@@ -19,6 +20,11 @@ export const metadata: Metadata = {
   },
   alternates: {
     canonical: "https://jungga-pagoe.vercel.app",
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "정가파괴",
   },
 };
 
@@ -46,6 +52,7 @@ export default async function RootLayout({
   return (
     <html lang="ko">
       <head>
+        <meta name="theme-color" content="#E31E24" />
         {/* Google AdSense - 정적 HTML에 삽입해 Google 크롤러 검증 통과 */}
         {/* eslint-disable-next-line @next/next/no-sync-scripts */}
         <script
