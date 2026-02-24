@@ -1,4 +1,5 @@
 import { MetadataRoute } from "next";
+import { CATEGORIES } from "@/lib/categories";
 
 const BASE_URL = "https://jungga-pagoe.vercel.app";
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
@@ -28,19 +29,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   } catch {}
 
   // 카테고리 페이지
-  let categoryPages: MetadataRoute.Sitemap = [];
-  try {
-    const res = await fetch(`${API_BASE}/api/categories`, { next: { revalidate: 3600 } });
-    if (res.ok) {
-      const cats: { category: string }[] = await res.json();
-      categoryPages = cats.map((c) => ({
-        url: `${BASE_URL}/?category=${encodeURIComponent(c.category)}`,
-        lastModified: now,
-        changeFrequency: "daily" as const,
-        priority: 0.7,
-      }));
-    }
-  } catch {}
+  const categoryPages: MetadataRoute.Sitemap = Object.values(CATEGORIES).map((c) => ({
+    url: `${BASE_URL}/category/${c.slug}`,
+    lastModified: now,
+    changeFrequency: "hourly" as const,
+    priority: 0.8,
+  }));
 
   // 딜 상세 페이지 (active 딜만)
   let dealPages: MetadataRoute.Sitemap = [];
