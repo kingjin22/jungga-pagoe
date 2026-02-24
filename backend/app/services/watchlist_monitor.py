@@ -96,6 +96,46 @@ INITIAL_WATCHLIST = [
     {"name": "노스페이스 눕시 패딩 2024", "search_query": "노스페이스 눕시 패딩 2024", "category": "패션", "brand": "The North Face", "msrp": 359000, "min_price": 150000},
     {"name": "아크테릭스 아톰 LT 후디", "search_query": "아크테릭스 아톰 LT 후디", "category": "패션", "brand": "Arc'teryx", "msrp": 569000, "min_price": 280000},
     {"name": "파타고니아 다운 스웨터", "search_query": "파타고니아 다운 스웨터", "category": "패션", "brand": "Patagonia", "msrp": 369000, "min_price": 150000},
+
+    # ── 생활가전 (확장) ───────────────────────────────────────
+    {"name": "다이슨 청소기", "search_query": "다이슨 청소기", "category": "생활가전", "brand": "Dyson", "msrp": 900000, "min_price": 400000},
+    {"name": "로보락 로봇청소기", "search_query": "로보락 로봇청소기", "category": "생활가전", "brand": "Roborock", "msrp": 700000, "min_price": 300000},
+    {"name": "에코백스 로봇청소기", "search_query": "에코백스 로봇청소기", "category": "생활가전", "brand": "ECOVACS", "msrp": 600000, "min_price": 250000},
+    {"name": "삼성 제트봇", "search_query": "삼성 제트봇 로봇청소기", "category": "생활가전", "brand": "Samsung", "msrp": 800000, "min_price": 350000},
+    {"name": "LG 스타일러", "search_query": "LG 스타일러 의류관리기", "category": "생활가전", "brand": "LG", "msrp": 1500000, "min_price": 700000},
+    {"name": "삼성 에어드레서", "search_query": "삼성 에어드레서 의류관리기", "category": "생활가전", "brand": "Samsung", "msrp": 1400000, "min_price": 650000},
+    {"name": "드롱기 커피머신", "search_query": "드롱기 전자동 커피머신", "category": "생활가전", "brand": "De'Longhi", "msrp": 800000, "min_price": 350000},
+    {"name": "네스프레소 버츄오 넥스트", "search_query": "네스프레소 버츄오 넥스트", "category": "생활가전", "brand": "Nespresso", "msrp": 199000, "min_price": 90000},
+    {"name": "에어프라이어 필립스", "search_query": "필립스 에어프라이어", "category": "생활가전", "brand": "Philips", "msrp": 200000, "min_price": 80000},
+    {"name": "에어프라이어 코스오리", "search_query": "코스오리 에어프라이어", "category": "생활가전", "brand": "Cosori", "msrp": 130000, "min_price": 50000},
+    {"name": "드롱기 인덕션 전기레인지", "search_query": "드롱기 인덕션 전기레인지", "category": "생활가전", "brand": "De'Longhi", "msrp": 350000, "min_price": 150000},
+
+    # ── 유아 ──────────────────────────────────────────────────
+    {"name": "스토케 트레일즈 유모차", "search_query": "스토케 유모차", "category": "유아", "brand": "Stokke", "msrp": 1200000, "min_price": 500000},
+    {"name": "맥시코시 카시트", "search_query": "맥시코시 카시트", "category": "유아", "brand": "Maxi-Cosi", "msrp": 500000, "min_price": 200000},
+    {"name": "에르고베이비 아기띠 옴니360", "search_query": "에르고베이비 아기띠 옴니360", "category": "유아", "brand": "Ergobaby", "msrp": 239000, "min_price": 100000},
+    {"name": "조이 트라일라 카시트", "search_query": "조이 카시트", "category": "유아", "brand": "Joie", "msrp": 350000, "min_price": 130000},
+
+    # ── 홈리빙 ────────────────────────────────────────────────
+    {"name": "샤오미 공기청정기 4 프로", "search_query": "샤오미 공기청정기", "category": "홈리빙", "brand": "Xiaomi", "msrp": 200000, "min_price": 80000},
+    {"name": "위닉스 공기청정기", "search_query": "위닉스 공기청정기", "category": "홈리빙", "brand": "Winix", "msrp": 300000, "min_price": 120000},
+    {"name": "코웨이 공기청정기", "search_query": "코웨이 공기청정기", "category": "홈리빙", "brand": "Coway", "msrp": 350000, "min_price": 140000},
+    {"name": "삼성 블루스카이 공기청정기", "search_query": "삼성 공기청정기 블루스카이", "category": "홈리빙", "brand": "Samsung", "msrp": 400000, "min_price": 160000},
+    {"name": "신일 제습기", "search_query": "신일 제습기", "category": "홈리빙", "brand": "Shinil", "msrp": 200000, "min_price": 80000},
+    {"name": "위닉스 제습기", "search_query": "위닉스 제습기", "category": "홈리빙", "brand": "Winix", "msrp": 250000, "min_price": 100000},
+    {"name": "파세코 가습기", "search_query": "파세코 가습기", "category": "홈리빙", "brand": "Paseco", "msrp": 100000, "min_price": 40000},
+
+    # ── 헬스/뷰티 (확장) ─────────────────────────────────────
+    {"name": "가민 포러너 265", "search_query": "가민 스마트워치 포러너", "category": "헬스", "brand": "Garmin", "msrp": 599000, "min_price": 280000},
+    {"name": "핏빗 차지 6", "search_query": "핏빗 차지 6", "category": "헬스", "brand": "Fitbit", "msrp": 199000, "min_price": 90000},
+    {"name": "파나소닉 면도기 라므다쉬", "search_query": "파나소닉 면도기", "category": "헬스", "brand": "Panasonic", "msrp": 200000, "min_price": 80000},
+    {"name": "브라운 시리즈9 면도기", "search_query": "브라운 면도기 시리즈9", "category": "헬스", "brand": "Braun", "msrp": 300000, "min_price": 120000},
+    {"name": "다이슨 슈퍼소닉 드라이어", "search_query": "다이슨 슈퍼소닉 드라이어", "category": "헬스", "brand": "Dyson", "msrp": 649000, "min_price": 350000},
+    {"name": "드림 드라이기", "search_query": "드림 헤어드라이어", "category": "헬스", "brand": "Dreame", "msrp": 250000, "min_price": 100000},
+
+    # ── 홈 (매트리스) ─────────────────────────────────────────
+    {"name": "시몬스 뷰티레스트 매트리스", "search_query": "시몬스 매트리스", "category": "홈", "brand": "Simmons", "msrp": 1000000, "min_price": 400000},
+    {"name": "에이스 매트리스", "search_query": "에이스 매트리스", "category": "홈", "brand": "Ace", "msrp": 800000, "min_price": 300000},
 ]
 
 
