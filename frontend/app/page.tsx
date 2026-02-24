@@ -4,7 +4,7 @@ import InfiniteDealsClient from "@/components/InfiniteDealsClient";
 import HotBanner from "@/components/HotBanner";
 import SortBar from "@/components/SortBar";
 import StatsBar from "@/components/StatsBar";
-import CategoryFilter from "@/components/CategoryFilter";
+import StickyFilter from "@/components/StickyFilter";
 import PageViewTracker from "@/components/PageViewTracker";
 import AdBanner from "@/components/AdBanner";
 import Link from "next/link";
@@ -115,9 +115,9 @@ export default async function HomePage({
           </h2>
         </div>
 
-        {/* 카테고리 필터 — DB 기반 동적 */}
+        {/* 카테고리 필터 — 스티키 */}
         <Suspense fallback={null}>
-          <CategoryFilter categories={categories} />
+          <StickyFilter categories={categories} />
         </Suspense>
 
         {/* 가격대 필터 */}
