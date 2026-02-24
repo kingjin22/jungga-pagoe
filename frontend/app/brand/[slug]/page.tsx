@@ -3,7 +3,7 @@ import { getDeals, getCategories } from "@/lib/api";
 import DealGrid from "@/components/DealGrid";
 import CategoryFilter from "@/components/CategoryFilter";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://jungga-pagoe-production.up.railway.app";
 
 // 슬러그 → 브랜드명 변환
 async function getBrands(): Promise<{ brand: string; slug: string; count: number; avg_discount: number }[]> {

@@ -2,7 +2,7 @@ import { MetadataRoute } from "next";
 import { CATEGORIES } from "@/lib/categories";
 
 const BASE_URL = "https://jungga-pagoe.vercel.app";
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://jungga-pagoe-production.up.railway.app";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
