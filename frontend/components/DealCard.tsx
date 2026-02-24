@@ -37,6 +37,36 @@ const CATEGORY_EMOJI: Record<string, string> = {
   "기타": "📦",
 };
 
+function TimeLeftBadge({ createdAt }: { createdAt: string }) {
+  const [left, setLeft] = useState("");
+
+  useEffect(() => {
+    const update = () => {
+      const diff = Date.now() - new Date(createdAt).getTime();
+      const remaining = 24 * 3600 * 1000 - diff;
+      if (remaining <= 0) { setLeft(""); return; }
+      const h = Math.floor(remaining / 3600000);
+      const m = Math.floor((remaining % 3600000) / 60000);
+      if (h >= 12) setLeft("NEW");
+      else if (h >= 1) setLeft(`⏱ ${h}시간`);
+      else setLeft(`⏱ ${m}분`);
+    };
+    update();
+    const t = setInterval(update, 60000);
+    return () => clearInterval(t);
+  }, [createdAt]);
+
+  if (!left) return null;
+  const isUrgent = left !== "NEW";
+  return (
+    <span className={`text-[10px] font-bold px-1.5 py-0.5 ${
+      isUrgent ? "bg-[#E31E24] text-white" : "bg-blue-500 text-white"
+    }`}>
+      {left}
+    </span>
+  );
+}
+
 function timeAgo(dateStr: string): string {
   const now = Date.now();
   const d = new Date(dateStr).getTime();
@@ -93,9 +123,9 @@ export default function DealCard({ deal, onClick, onDismiss }: DealCardProps) {
   const retailer = extractRetailer(deal.title, deal.submitter_name);
 
   const now = new Date();
-  const createdAt = deal.created_at ? new Date(deal.created_at) : null;
-  const ageHours = createdAt ? (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60) : 999;
-  const isNew = ageHours < 2;
+  const createdAtDate = deal.created_at ? new Date(deal.created_at) : null;
+  const ageHours = createdAtDate ? (now.getTime() - createdAtDate.getTime()) / (1000 * 60 * 60) : 999;
+  const isWithin24h = ageHours < 24;
   const isExpiringSoon = deal.source === "community" && ageHours > 20;
   const brandSlug = retailer ? retailer.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") : "";
   const hasBrandPage = !!brandSlug && /^[a-z]/.test(brandSlug); // 영문 브랜드만
@@ -214,14 +244,14 @@ export default function DealCard({ deal, onClick, onDismiss }: DealCardProps) {
           </div>
         ) : null}
 
-        {/* NEW / 마감임박 배지 */}
-        {(isNew && !deal.is_hot) && (
-          <div className="absolute top-0 right-0 bg-blue-500 text-white text-[9px] font-bold px-1.5 py-0.5 leading-none">
-            NEW
+        {/* 남은시간 배지 (24h 이내) / 마감임박 */}
+        {(isWithin24h && !deal.is_hot) && (
+          <div className="absolute top-0 right-0 leading-none">
+            <TimeLeftBadge createdAt={deal.created_at} />
           </div>
         )}
         {isExpiringSoon && (
-          <div className={`absolute ${(isNew && !deal.is_hot) ? "top-5" : "top-0"} right-0 bg-orange-500 text-white text-[9px] font-bold px-1.5 py-0.5 leading-none`}>
+          <div className={`absolute ${(isWithin24h && !deal.is_hot) ? "top-5" : "top-0"} right-0 bg-orange-500 text-white text-[9px] font-bold px-1.5 py-0.5 leading-none`}>
             마감임박
           </div>
         )}

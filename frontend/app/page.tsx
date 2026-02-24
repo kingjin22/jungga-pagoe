@@ -10,6 +10,7 @@ import AdBanner from "@/components/AdBanner";
 import Link from "next/link";
 import CoupangBanner from "@/components/CoupangBanner";
 import TrendingSection from "@/components/TrendingSection";
+import PriceFilter from "@/components/PriceFilter";
 
 interface SearchParams {
   sort?: string;
@@ -17,6 +18,8 @@ interface SearchParams {
   source?: string;
   search?: string;
   hot_only?: string;
+  price_min?: string;
+  price_max?: string;
 }
 
 export default async function HomePage({
@@ -25,7 +28,9 @@ export default async function HomePage({
   searchParams: Promise<SearchParams>;
 }) {
   const params = await searchParams;
-  const isFiltered = !!(params.category || params.source || params.search || params.hot_only);
+  const priceMin = Number(params.price_min || 0);
+  const priceMax = Number(params.price_max || 0);
+  const isFiltered = !!(params.category || params.source || params.search || params.hot_only || priceMin || priceMax);
 
   const [dealsData, hotDeals, categories, trendingDeals] = await Promise.all([
     getDeals({
@@ -36,6 +41,8 @@ export default async function HomePage({
       source: params.source,
       search: params.search,
       hot_only: params.hot_only === "true",
+      price_min: priceMin || undefined,
+      price_max: priceMax || undefined,
     }).catch(() => ({ items: [], total: 0, page: 1, size: 20, pages: 1 })),
     isFiltered ? Promise.resolve([]) : getHotDeals().catch(() => []),
     getCategories().catch(() => []),
@@ -110,6 +117,11 @@ export default async function HomePage({
           <CategoryFilter categories={categories} />
         </Suspense>
 
+        {/* 가격대 필터 */}
+        <Suspense fallback={null}>
+          <PriceFilter />
+        </Suspense>
+
         {/* 정렬 바 */}
         <Suspense fallback={null}>
           <SortBar total={dealsData.total} />
@@ -153,6 +165,8 @@ export default async function HomePage({
               search: params.search,
               sort: params.sort,
               hot_only: params.hot_only,
+              price_min: params.price_min,
+              price_max: params.price_max,
             }}
           />
           </>

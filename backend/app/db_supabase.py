@@ -59,6 +59,8 @@ def get_deals(
     hot_only: bool = False,
     brand: str = None,
     offset: int = None,  # 직접 offset 지정 시 page 무시
+    price_min: int = None,
+    price_max: int = None,
 ) -> dict:
     sb = get_supabase()
     query = sb.table("deals").select("*", count="exact")
@@ -77,6 +79,10 @@ def get_deals(
     if brand:
         # submitter_name 또는 title의 [Brand] 태그로 필터
         query = query.or_(f"submitter_name.ilike.%{brand}%,title.ilike.%[{brand}]%")
+    if price_min is not None:
+        query = query.gte("sale_price", price_min)
+    if price_max is not None:
+        query = query.lte("sale_price", price_max)
 
     # 정렬
     sort_map = {

@@ -16,6 +16,8 @@ interface Props {
     search?: string;
     sort?: string;
     hot_only?: string;
+    price_min?: string;
+    price_max?: string;
   };
 }
 
@@ -40,6 +42,8 @@ export default function InfiniteDealsClient({ initialDeals, filterParams }: Prop
       if (filterParams.search) q.set("search", filterParams.search);
       if (filterParams.sort) q.set("sort", filterParams.sort);
       if (filterParams.hot_only === "true") q.set("hot_only", "true");
+      if (filterParams.price_min) q.set("price_min", filterParams.price_min);
+      if (filterParams.price_max) q.set("price_max", filterParams.price_max);
 
       const res = await fetch(`${API_BASE}/api/deals?${q}`);
       if (!res.ok) throw new Error("딜 로드 실패");

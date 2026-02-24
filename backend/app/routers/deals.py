@@ -18,11 +18,13 @@ async def get_deals(
     search: Optional[str] = None,
     hot_only: bool = False,
     brand: Optional[str] = None,
+    price_min: Optional[int] = None,
+    price_max: Optional[int] = None,
 ):
     return db.get_deals(
         page=page, size=size, category=category,
         source=source, sort=sort, search=search, hot_only=hot_only,
-        brand=brand, offset=offset,
+        brand=brand, offset=offset, price_min=price_min, price_max=price_max,
     )
 
 
