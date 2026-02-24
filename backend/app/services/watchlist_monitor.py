@@ -332,7 +332,7 @@ async def run_watchlist_monitor():
                     "discount_rate": discount_rate,
                     "image_url": image_url,
                     "product_url": f"https://search.shopping.naver.com/search/all?query={item['search_query'].replace(' ', '+')}",
-                    "source": "naver",
+                    "source": "watchlist",
                     "category": item["category"],
                     "status": "active",
                     "is_hot": discount_rate >= 25,
