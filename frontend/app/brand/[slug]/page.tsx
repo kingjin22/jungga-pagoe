@@ -99,6 +99,12 @@ export default async function BrandPage({ params }: { params: Promise<{ slug: st
 
   const desc = BRAND_DESC[brand] || `${brand} 제품의 공식 정가 대비 현재 최저가를 실시간으로 추적합니다.`;
 
+  // 활성 딜 중 최저 sale_price (역대 최저가 배지용)
+  const activePrices = dealsData.items
+    .map((d) => d.sale_price)
+    .filter((p): p is number => typeof p === "number" && p > 0);
+  const minActivePrice = activePrices.length > 0 ? Math.min(...activePrices) : null;
+
   // Schema.org JSON-LD
   const jsonLd = {
     "@context": "https://schema.org",
@@ -162,6 +168,19 @@ export default async function BrandPage({ params }: { params: Promise<{ slug: st
             </div>
           </section>
         )}
+
+        {/* 현재 최저가 딜 하이라이트 */}
+        {minActivePrice !== null && dealsData.items.length > 0 && (() => {
+          const cheapest = dealsData.items.find((d) => d.sale_price === minActivePrice);
+          if (!cheapest) return null;
+          return (
+            <div className="mb-6 flex items-center gap-3 bg-red-50 border border-red-100 px-4 py-3">
+              <span className="bg-[#E31E24] text-white text-[10px] font-bold px-2 py-0.5 shrink-0">역대 최저</span>
+              <p className="text-sm text-gray-800 truncate flex-1">{cheapest.title}</p>
+              <span className="text-sm font-bold text-[#E31E24] shrink-0">{minActivePrice.toLocaleString()}원</span>
+            </div>
+          );
+        })()}
 
         {/* 딜 그리드 */}
         {dealsData.items.length > 0 ? (

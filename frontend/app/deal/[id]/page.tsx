@@ -316,10 +316,19 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
               ← 다른 딜 보기
             </Link>
 
-            {/* 조회수 */}
-            {(deal.views ?? 0) > 0 && (
-              <p className="text-xs text-gray-400 text-center mt-3">👁 {deal.views.toLocaleString()}명이 봤어요</p>
-            )}
+            {/* 조회수 + 등록 시간 */}
+            <div className="flex items-center justify-center gap-3 mt-3">
+              {(deal.views ?? 0) > 0 && (
+                <p className="text-xs text-gray-400">👁 {deal.views.toLocaleString()}명이 봤어요</p>
+              )}
+              {deal.created_at && (() => {
+                const diffMs = Date.now() - new Date(deal.created_at).getTime();
+                const diffH = Math.floor(diffMs / 3600000);
+                const diffD = Math.floor(diffH / 24);
+                const label = diffD > 0 ? `${diffD}일 전 등록` : diffH > 0 ? `${diffH}시간 전 등록` : "방금 등록";
+                return <p className="text-xs text-gray-400">🕐 {label}</p>;
+              })()}
+            </div>
           </div>
         </div>
 
