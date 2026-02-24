@@ -6,7 +6,7 @@ import DealCard from "./DealCard";
 import DealModal from "./DealModal";
 
 const PAGE_SIZE = 20;
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://jungga-pagoe-production.up.railway.app";
 
 interface Props {
   initialDeals: Deal[];
@@ -53,7 +53,7 @@ export default function InfiniteDealsClient({ initialDeals, filterParams }: Prop
       setDeals((prev) => [...prev, ...newDeals]);
       setOffset((prev) => prev + newDeals.length);
     } catch {
-      // 네트워크 오류 시 조용히 실패 — 재시도는 다음 스크롤 시
+      setHasMore(false); // 오류 시 더 이상 시도 안 함
     } finally {
       setLoading(false);
     }

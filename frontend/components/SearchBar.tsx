@@ -8,7 +8,7 @@ interface Suggestion {
   value: string;
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://jungga-pagoe-production.up.railway.app";
 
 const TYPE_LABEL: Record<Suggestion["type"], string> = {
   brand: "브랜드",
