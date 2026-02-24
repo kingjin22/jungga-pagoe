@@ -81,6 +81,19 @@ async def get_suggestions(q: str = ""):
     return suggestions[:8]
 
 
+@router.get("/by-ids")
+async def get_deals_by_ids(ids: str = ""):
+    """찜 목록용: 콤마구분 ID로 딜 조회"""
+    if not ids:
+        return []
+    id_list = [int(i) for i in ids.split(",") if i.strip().isdigit()][:50]
+    if not id_list:
+        return []
+    sb = db.get_supabase()
+    res = sb.table("deals").select("*").in_("id", id_list).execute()
+    return [db._to_deal_dict(r) for r in (res.data or [])]
+
+
 @router.get("/{deal_id}/related")
 async def get_related_deals(deal_id: int):
     """같은 카테고리에서 최신 3개 추천 (자기 자신 제외)"""

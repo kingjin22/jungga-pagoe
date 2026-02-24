@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Deal, formatPrice, upvoteDeal } from "@/lib/api";
 import { trackEvent } from "@/lib/tracking";
+import FavoriteButton from "./FavoriteButton";
 
 interface DealCardProps {
   deal: Deal;
@@ -175,6 +176,7 @@ export default function DealCard({ deal, onClick, onDismiss }: DealCardProps) {
 
       {/* 이미지 영역 */}
       <div className="relative overflow-hidden bg-gray-100 aspect-square">
+        <FavoriteButton dealId={deal.id} />
         {deal.image_url ? (
           <Image
             src={deal.image_url}
