@@ -51,6 +51,17 @@ async def get_related_deals(deal_id: int):
     return [db._to_deal_dict(r) for r in (res.data or [])]
 
 
+@router.get("/{deal_id}/price-history")
+async def get_price_history(deal_id: int):
+    from app.db_supabase import get_supabase
+    sb = get_supabase()
+    try:
+        res = sb.table("deal_price_log").select("price,recorded_at").eq("deal_id", deal_id).order("recorded_at").limit(60).execute()
+        return res.data or []
+    except Exception:
+        return []
+
+
 @router.get("/{deal_id}")
 async def get_deal(deal_id: int):
     deal = db.get_deal_by_id(deal_id)

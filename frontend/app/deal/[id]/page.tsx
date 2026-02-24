@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { getDeal, getRelatedDeals, formatPrice } from "@/lib/api";
 import PriceChart from "@/components/PriceChart";
+import PriceHistoryChart from "@/components/PriceHistoryChart";
 import DealCard from "@/components/DealCard";
 
 const BASE_URL = "https://jungga-pagoe.vercel.app";
@@ -242,6 +243,13 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
             <p className="text-[11px] text-gray-300 text-center mt-3">조회 {deal.views?.toLocaleString() || 0}회</p>
           </div>
         </div>
+
+        {/* 딜 가격 히스토리 차트 (deal_price_log 기반) */}
+        <PriceHistoryChart
+          dealId={deal.id}
+          salePrice={deal.sale_price}
+          originalPrice={deal.original_price}
+        />
 
         {/* 관련 딜 */}
         {relatedDeals.length > 0 && (

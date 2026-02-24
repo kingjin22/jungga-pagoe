@@ -353,6 +353,17 @@ async def _verify_prices():
                     logger.info(f"    ↓ 가격 업데이트: {int(deal.get('sale_price',0)):,} → {int(new_price):,}원")
                 else:
                     patch["status"] = "active"; patch["verify_fail_count"] = 0; ok += 1
+                # 가격 로그 insert (에러 무시)
+                current_price = check.get("verified_price")
+                if current_price is not None:
+                    try:
+                        db.get_supabase().table("deal_price_log").insert({
+                            "deal_id": deal["id"],
+                            "price": int(current_price),
+                            "source": "verify"
+                        }).execute()
+                    except Exception:
+                        pass
                 db.update_deal_verify(deal["id"], patch)
             except Exception as e:
                 logger.error(f"  딜 #{deal.get('id')} 검증 오류: {e}")
