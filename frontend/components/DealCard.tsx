@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Deal, formatPrice, upvoteDeal } from "@/lib/api";
 import { trackEvent } from "@/lib/tracking";
 import FavoriteButton from "./FavoriteButton";
+import { useRecentDeals } from "@/hooks/useRecentDeals";
 
 interface DealCardProps {
   deal: Deal;
@@ -92,6 +93,8 @@ function extractRetailer(title: string, submitterName?: string): string {
 export default function DealCard({ deal, onClick, onDismiss }: DealCardProps) {
   const [upvotes, setUpvotes] = useState(deal.upvotes);
   const [voted, setVoted] = useState(false);
+  const [imgError, setImgError] = useState(false);
+  const { addRecent } = useRecentDeals();
   const cardRef = useRef<HTMLDivElement>(null);
   const impressedRef = useRef(false);
 
@@ -142,6 +145,7 @@ export default function DealCard({ deal, onClick, onDismiss }: DealCardProps) {
 
   const handleCardClick = () => {
     trackEvent("deal_open", deal.id);
+    addRecent(deal.id);
     onClick?.(deal);
   };
 
@@ -207,13 +211,14 @@ export default function DealCard({ deal, onClick, onDismiss }: DealCardProps) {
       {/* 이미지 영역 */}
       <div className="relative overflow-hidden bg-gray-100 aspect-square">
         <FavoriteButton dealId={deal.id} />
-        {deal.image_url ? (
+        {deal.image_url && !imgError ? (
           <Image
             src={deal.image_url}
             alt={deal.title}
             fill
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
             className="object-cover"
+            onError={() => setImgError(true)}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-4xl bg-gray-50">

@@ -11,6 +11,8 @@ import Link from "next/link";
 import CoupangBanner from "@/components/CoupangBanner";
 import TrendingSection from "@/components/TrendingSection";
 import PriceFilter from "@/components/PriceFilter";
+import RecentDeals from "@/components/RecentDeals";
+import { DealGridSkeleton } from "@/components/DealCardSkeleton";
 
 interface SearchParams {
   sort?: string;
@@ -129,6 +131,9 @@ export default async function HomePage({
 
         {/* 지금 인기 TOP 3 */}
         {!isFiltered && <TrendingSection deals={trendingDeals} />}
+
+        {/* 최근 본 딜 */}
+        {!isFiltered && <RecentDeals />}
 
         {/* 딜 그리드 (무한 스크롤) */}
         {dealsData.items.length === 0 ? (

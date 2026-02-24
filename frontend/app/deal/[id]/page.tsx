@@ -57,7 +57,33 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
 
   const relatedDeals = await getRelatedDeals(Number(id));
 
-  if (!deal || deal.status === "expired") notFound();
+  if (!deal) notFound();
+
+  // 만료된 딜: "이 딜은 종료됐어요" 페이지
+  if (deal.status === "expired" || deal.status === "price_changed") {
+    return (
+      <div className="max-w-screen-xl mx-auto px-4 py-16 text-center">
+        <div className="text-4xl mb-4">😢</div>
+        <h1 className="text-xl font-bold mb-2">이 딜은 종료됐어요</h1>
+        <p className="text-gray-400 text-sm mb-8">
+          {deal.status === "price_changed" ? "가격이 변동됐어요" : "판매가 종료됐어요"}
+        </p>
+        {relatedDeals.length > 0 && (
+          <>
+            <h2 className="text-sm font-semibold mb-4 text-left">비슷한 딜 보기</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              {relatedDeals.map((d) => (
+                <Link key={d.id} href={`/deal/${d.id}`}>
+                  <DealCard deal={d} />
+                </Link>
+              ))}
+            </div>
+          </>
+        )}
+        <Link href="/" className="mt-8 inline-block text-sm text-[#E31E24]">← 전체 딜 보기</Link>
+      </div>
+    );
+  }
 
   const saved = deal.original_price - deal.sale_price;
   const dr = Math.round(deal.discount_rate);
@@ -82,14 +108,15 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
   const buyButtonText = (() => {
     if (isFree) return "지금 무료로 받기";
     const src = deal.source?.toLowerCase() || "";
-    if (src === "coupang") return "쿠팡 로켓배송 보기";
-    if (src === "naver") return "네이버 최저가 보기";
+    if (src === "watchlist" || src === "naver") return "네이버 최저가 보기";
+    if (src === "coupang" || targetUrl?.includes("coupang")) return "쿠팡에서 보기";
+    if (src === "ppomppu" || src === "community") return "원글 보러가기";
     if (src === "11st") return "11번가에서 보기";
     if (src === "gmarket") return "G마켓에서 보기";
     if (src === "interpark") return "인터파크에서 보기";
     if (src === "wemakeprice") return "위메프에서 보기";
     if (src === "tmon") return "티몬에서 보기";
-    return "지금 최저가 구매";
+    return "딜 보러가기";
   })();
 
   // Product 스키마 — Google Shopping 리치 결과용
@@ -290,7 +317,9 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
             </Link>
 
             {/* 조회수 */}
-            <p className="text-[11px] text-gray-300 text-center mt-3">조회 {deal.views?.toLocaleString() || 0}회</p>
+            {(deal.views ?? 0) > 0 && (
+              <p className="text-xs text-gray-400 text-center mt-3">👁 {deal.views.toLocaleString()}명이 봤어요</p>
+            )}
           </div>
         </div>
 
