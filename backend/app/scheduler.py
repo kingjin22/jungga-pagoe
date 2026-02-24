@@ -689,19 +689,22 @@ async def _cleanup_invalid_deals():
                 }).eq("id", d["id"]).execute()
                 logger.info(f"🗑 자동만료(0%): #{d['id']} {d['title'][:35]}")
 
-        # 2) 식품/일상용품 커뮤니티 딜
+        # 2) 식품/일상용품 커뮤니티 딜 — 카테고리 기반 + 타이틀 키워드 2중 검사
+        from app.services.community_enricher import is_food_or_daily
         BLOCKED_CATS = ["식품", "유아동"]
         res2 = sb.table("deals").select("id,title,category,source") \
             .eq("status", "active") \
             .eq("source", "community") \
-            .in_("category", BLOCKED_CATS) \
             .execute()
         for d in (res2.data or []):
-            sb.table("deals").update({
-                "status": "expired",
-                "admin_note": f"[자동만료] 식품/유아동 커뮤니티 딜 철칙위반"
-            }).eq("id", d["id"]).execute()
-            logger.info(f"🗑 자동만료(식품): #{d['id']} {d['title'][:35]}")
+            cat = d.get("category", "")
+            title = d.get("title", "")
+            if cat in BLOCKED_CATS or is_food_or_daily(title, cat):
+                sb.table("deals").update({
+                    "status": "expired",
+                    "admin_note": f"[자동만료] 식품/일상용품 커뮤니티 딜 철칙위반"
+                }).eq("id", d["id"]).execute()
+                logger.info(f"🗑 자동만료(식품): #{d['id']} {d['title'][:35]}")
 
         # 3) 할인율 10% 미만 active 딜 만료 (비커뮤니티 딜만 — 커뮤니티는 MSRP 없이 등록)
         res3 = sb.table("deals").select("id,title,discount_rate,sale_price,source") \
