@@ -40,7 +40,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // 딜 상세 페이지 (active 딜만)
   let dealPages: MetadataRoute.Sitemap = [];
   try {
-    const res = await fetch(`${API_BASE}/api/deals?size=500&sort=discount`, { next: { revalidate: 1800 } });
+    const res = await fetch(`${API_BASE}/api/deals/?limit=500&status=active`, { next: { revalidate: 1800 } });
     if (res.ok) {
       const data: { items: { id: number; updated_at: string; discount_rate: number }[] } = await res.json();
       dealPages = data.items.map((d) => ({
