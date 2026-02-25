@@ -12,7 +12,8 @@ class Settings(BaseSettings):
 
     # Supabase (optional)
     SUPABASE_URL: str = ""
-    SUPABASE_KEY: str = ""
+    SUPABASE_KEY: str = ""          # anon key (프론트엔드용)
+    SUPABASE_SERVICE_KEY: str = ""  # service_role key (백엔드 전용, RLS 우회)
 
     # 쿠팡 파트너스
     COUPANG_ACCESS_KEY: str = ""

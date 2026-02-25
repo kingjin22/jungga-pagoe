@@ -14,7 +14,9 @@ _client = None
 def get_supabase() -> Client:
     global _client
     if _client is None:
-        _client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
+        # service_role key 우선 사용 (RLS 우회), 없으면 anon key fallback
+        key = settings.SUPABASE_SERVICE_KEY or settings.SUPABASE_KEY
+        _client = create_client(settings.SUPABASE_URL, key)
     return _client
 
 
