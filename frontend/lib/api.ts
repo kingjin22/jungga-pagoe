@@ -10,7 +10,7 @@ export interface Deal {
   image_url?: string;
   product_url: string;
   affiliate_url?: string;
-  source: "coupang" | "naver" | "community";
+  source: "coupang" | "naver" | "community" | "watchlist" | "ppomppu" | "clien" | "ruliweb" | string;
   category: string;
   status: "active" | "expired" | "price_changed" | "pending";
   upvotes: number;
