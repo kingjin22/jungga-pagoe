@@ -7,6 +7,7 @@ import PriceChart from "@/components/PriceChart";
 import PriceHistoryChart from "@/components/PriceHistoryChart";
 import DealCard from "@/components/DealCard";
 import ShareButtons from "@/components/ShareButtons";
+import BoughtButton from "@/components/BoughtButton";
 
 const BASE_URL = "https://jungga-pagoe.vercel.app";
 
@@ -304,6 +305,11 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
             >
               {buyButtonText} →
             </a>
+
+            {/* C-003: 구매했어요 버튼 */}
+            <div className="mb-3">
+              <BoughtButton dealId={deal.id} />
+            </div>
 
             {/* 공유 버튼 */}
             <div className="mb-3">
