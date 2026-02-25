@@ -34,7 +34,7 @@ async def _sync_naver():
                 continue
             v = validator.validate_sync(item)
             if not v:
-                logger.debug(f"[네이버skip] {v.reason}")
+                logger.info(f"[네이버skip] {v.reason}")
                 skipped += 1
                 continue
             # 제목+가격 중복 체크 (URL 달라도 동일 제품 방지)
@@ -512,6 +512,69 @@ async def _sync_clien():
         logger.error(f"❌ 클리앙 sync: {e}")
 
 
+async def _sync_ruliweb():
+    """루리웹 핫딜 RSS 수집 — 2시간마다"""
+    try:
+        import app.db_supabase as db
+        from app.services.ruliweb import fetch_ruliweb_deals
+
+        deals_data = await fetch_ruliweb_deals()
+        created = skipped = 0
+
+        for item in deals_data:
+            source_post_url = item.get("source_post_url", "")
+
+            if source_post_url and db.deal_url_exists(source_post_url):
+                skipped += 1
+                continue
+
+            product_url = item.get("product_url", "")
+            if product_url and db.deal_url_exists(product_url):
+                skipped += 1
+                continue
+
+            sale = float(item.get("sale_price") or 0)
+            if sale <= 0:
+                skipped += 1
+                continue
+
+            orig = float(item.get("original_price") or 0)
+            discount_rate = float(item.get("discount_rate") or 0)
+
+            if orig <= 0 or orig <= sale:
+                skipped += 1
+                continue
+            if discount_rate < 10:
+                skipped += 1
+                continue
+
+            if db.deal_duplicate_exists(item["title"], sale):
+                skipped += 1
+                continue
+
+            db.create_deal({
+                "title": item["title"],
+                "description": item.get("description"),
+                "original_price": orig,
+                "sale_price": sale,
+                "discount_rate": discount_rate,
+                "image_url": item.get("image_url"),
+                "product_url": product_url or source_post_url,
+                "source_post_url": source_post_url,
+                "source": "community",
+                "category": item.get("category", "기타"),
+                "status": "active",
+                "is_hot": discount_rate >= 40,
+                "submitter_name": item.get("submitter_name", "루리웹"),
+            })
+            logger.info(f"  ✅ [루리웹] 저장: {item['title'][:35]} | -{discount_rate}%")
+            created += 1
+
+        logger.info(f"✅ 루리웹 sync: {created}개 저장 | {skipped}개 제외")
+    except Exception as e:
+        logger.error(f"❌ 루리웹 sync: {e}")
+
+
 async def _sync_algumon():
     """알구몬 API로 커뮤니티 딜 수집 (뽐뿌+루리웹+어미새+아카라이브)"""
     try:
@@ -664,9 +727,9 @@ def start_scheduler():
     )
     scheduler.add_job(
         _sync_naver,
-        trigger=IntervalTrigger(minutes=30),
+        trigger=IntervalTrigger(minutes=15),
         id="sync_naver",
-        name="네이버 딜 자동 동기화",
+        name="네이버 딜 자동 동기화 (15m)",
         replace_existing=True,
     )
     scheduler.add_job(
@@ -709,6 +772,13 @@ def start_scheduler():
         trigger=IntervalTrigger(hours=2),
         id="sync_clien",
         name="클리앙 핫딜 RSS 동기화 (2h)",
+        replace_existing=True,
+    )
+    scheduler.add_job(
+        _sync_ruliweb,
+        trigger=IntervalTrigger(hours=2),
+        id="sync_ruliweb",
+        name="루리웹 핫딜 RSS 동기화 (2h)",
         replace_existing=True,
     )
     scheduler.add_job(
