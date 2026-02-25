@@ -318,8 +318,15 @@ async def quick_add_deal(
     else:
         detected_source = body.source
 
-    # 쿠팡 URL → 파트너스 링크 자동 변환 (link.coupang.com이 아닐 때)
+    # URL 없으면 네이버 쇼핑 검색 링크 자동 생성
     final_url = body.product_url.strip()
+    if not final_url:
+        import urllib.parse
+        query = urllib.parse.quote(body.title.strip())
+        final_url = f"https://search.shopping.naver.com/search/all?query={query}"
+        detected_source = detected_source if detected_source != "admin" else "naver"
+
+    # 쿠팡 URL → 파트너스 링크 자동 변환 (link.coupang.com이 아닐 때)
     if detected_source == "coupang" and "link.coupang.com" not in url:
         try:
             from app.services.coupang_partners import generate_affiliate_link

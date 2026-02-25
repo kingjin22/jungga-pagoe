@@ -272,15 +272,21 @@ export default function DealModal({ deal, onClose }: DealModalProps) {
           </div>
 
           {/* 구매 버튼 */}
-          <a
-            href={targetUrl}
-            target="_blank"
-            rel="noopener noreferrer sponsored"
-            onClick={() => trackEvent("outbound_click", d.id)}
-            className="block w-full text-center bg-[#111] text-white font-bold py-3.5 text-sm hover:bg-[#333] transition-colors"
-          >
-            {d.sale_price === 0 ? "지금 무료로 받기" : "지금 최저가 구매"}
-          </a>
+          {targetUrl ? (
+            <a
+              href={targetUrl}
+              target="_blank"
+              rel="noopener noreferrer sponsored"
+              onClick={() => trackEvent("outbound_click", d.id)}
+              className="block w-full text-center bg-[#111] text-white font-bold py-3.5 text-sm hover:bg-[#333] transition-colors"
+            >
+              {d.sale_price === 0 ? "지금 무료로 받기" : "지금 최저가 구매"}
+            </a>
+          ) : (
+            <p className="block w-full text-center bg-gray-100 text-gray-400 font-bold py-3.5 text-sm">
+              링크 준비 중
+            </p>
+          )}
 
           {d.affiliate_url && (
             <p className="text-[10px] text-gray-300 text-center mt-2">

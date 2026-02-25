@@ -359,19 +359,28 @@ export default function DealCard({ deal, onClick, onDismiss }: DealCardProps) {
         </div>
 
         {/* 구매 링크 */}
-        <a
-          href={targetUrl}
-          target="_blank"
-          rel="noopener noreferrer sponsored"
-          onClick={(e) => { e.stopPropagation(); trackEvent("outbound_click", deal.id); }}
-          className={`block mt-2 text-center text-[12px] font-bold py-2.5 transition-all active:scale-95 ${
-            deal.is_hot || deal.discount_rate >= 40
-              ? "bg-gradient-to-r from-red-500 to-orange-500 text-white hover:from-red-600 hover:to-orange-600 shadow-sm"
-              : "border border-gray-200 text-gray-700 hover:border-gray-900 hover:text-black"
-          }`}
-        >
-          {isFree ? "받으러 가기" : deal.source === "community" ? "딜 보러가기" : "지금 최저가 구매"}
-        </a>
+        {targetUrl ? (
+          <a
+            href={targetUrl}
+            target="_blank"
+            rel="noopener noreferrer sponsored"
+            onClick={(e) => { e.stopPropagation(); trackEvent("outbound_click", deal.id); }}
+            className={`block mt-2 text-center text-[12px] font-bold py-2.5 transition-all active:scale-95 ${
+              deal.is_hot || deal.discount_rate >= 40
+                ? "bg-gradient-to-r from-red-500 to-orange-500 text-white hover:from-red-600 hover:to-orange-600 shadow-sm"
+                : "border border-gray-200 text-gray-700 hover:border-gray-900 hover:text-black"
+            }`}
+          >
+            {isFree ? "받으러 가기" : deal.source === "community" ? "딜 보러가기" : "지금 최저가 구매"}
+          </a>
+        ) : (
+          <span
+            onClick={(e) => e.stopPropagation()}
+            className="block mt-2 text-center text-[12px] font-bold py-2.5 bg-gray-50 text-gray-300 cursor-default"
+          >
+            링크 없음
+          </span>
+        )}
       </div>
     </div>
   );
