@@ -41,6 +41,10 @@ def _to_deal_dict(row: dict) -> dict:
         "status": row.get("status", "active"),
         "upvotes": int(row.get("upvotes", 0)),
         "views": int(row.get("views", 0)),
+        "today_views": int(row.get("today_views", 0) or 0),
+        "total_views": int(row.get("total_views", 0) or 0),
+        "today_clicks": int(row.get("today_clicks", 0) or 0),
+        "total_clicks": int(row.get("total_clicks", 0) or 0),
         "is_hot": bool(row.get("is_hot", False)),
         "submitter_name": row.get("submitter_name"),
         "expires_at": row.get("expires_at"),
@@ -140,10 +144,31 @@ def get_deal_by_id(deal_id: int) -> dict:
 def increment_views(deal_id: int) -> None:
     sb = get_supabase()
     # views + 1 (rpc 또는 read-modify-write)
-    current = sb.table("deals").select("views").eq("id", deal_id).limit(1).execute()
+    current = sb.table("deals").select("views,today_views,total_views").eq("id", deal_id).limit(1).execute()
     if current.data:
-        new_views = int(current.data[0].get("views", 0)) + 1
-        sb.table("deals").update({"views": new_views}).eq("id", deal_id).execute()
+        row = current.data[0]
+        new_views = int(row.get("views", 0)) + 1
+        new_today_views = int(row.get("today_views", 0) or 0) + 1
+        new_total_views = int(row.get("total_views", 0) or 0) + 1
+        sb.table("deals").update({
+            "views": new_views,
+            "today_views": new_today_views,
+            "total_views": new_total_views,
+        }).eq("id", deal_id).execute()
+
+
+def increment_clicks(deal_id: int) -> None:
+    """딜 클릭수 증가 (today_clicks + total_clicks)"""
+    sb = get_supabase()
+    current = sb.table("deals").select("today_clicks,total_clicks").eq("id", deal_id).limit(1).execute()
+    if current.data:
+        row = current.data[0]
+        new_today = int(row.get("today_clicks", 0) or 0) + 1
+        new_total = int(row.get("total_clicks", 0) or 0) + 1
+        sb.table("deals").update({
+            "today_clicks": new_today,
+            "total_clicks": new_total,
+        }).eq("id", deal_id).execute()
 
 
 def upvote_deal(deal_id: int) -> dict:

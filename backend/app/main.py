@@ -11,6 +11,7 @@ from app.rate_limit import limiter
 from app.config import settings
 from app.routers import deals, stats, verify, feed
 from app.routers import admin as admin_router
+from app.routers import search as search_router
 from app.scheduler import start_scheduler, stop_scheduler
 import app.db_supabase as db
 
@@ -46,6 +47,7 @@ app.include_router(stats.router)
 app.include_router(verify.router)
 app.include_router(admin_router.router)
 app.include_router(feed.router)
+app.include_router(search_router.router)
 
 
 # ──────────────────────────────────────────
@@ -76,6 +78,12 @@ async def track_event(payload: EventPayload, request: Request):
         user_agent=user_agent,
         ip_address=ip,
     )
+    # C-009: outbound_click 시 deal 클릭 카운트 증가
+    if payload.event_type == "outbound_click" and payload.deal_id:
+        try:
+            db.increment_clicks(payload.deal_id)
+        except Exception:
+            pass  # 카운트 실패는 무시
     return {"ok": True}
 
 

@@ -41,6 +41,10 @@ class DealResponse(BaseModel):
     status: str
     upvotes: int
     views: int
+    today_views: int = 0
+    total_views: int = 0
+    today_clicks: int = 0
+    total_clicks: int = 0
     is_hot: bool
     submitter_name: Optional[str] = None
     expires_at: Optional[str] = None

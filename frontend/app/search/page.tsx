@@ -1,6 +1,9 @@
 import { Suspense } from "react";
 import DealCard from "@/components/DealCard";
+import PopularSearchTags from "@/components/PopularSearchTags";
+import SearchLogger from "@/components/SearchLogger";
 import Link from "next/link";
+import { getPopularSearches } from "@/lib/api";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://jungga-pagoe-production.up.railway.app";
 
@@ -54,9 +57,20 @@ async function SearchResults({ q }: { q: string }) {
 export default async function SearchPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   const params = await searchParams;
   const q = params.q || "";
+
+  // C-002: 인기 검색어 + 검색어 로깅
+  const popularSearches = await getPopularSearches().catch(() => []);
+
   return (
     <div className="max-w-screen-xl mx-auto px-4 py-8">
-      <h1 className="text-xl font-bold mb-6">검색</h1>
+      <h1 className="text-xl font-bold mb-4">검색</h1>
+
+      {/* C-002: 인기 검색어 태그 */}
+      <PopularSearchTags searches={popularSearches} />
+
+      {/* C-002: 검색어 로깅 (클라이언트 사이드) */}
+      {q && <SearchLogger keyword={q} />}
+
       <Suspense fallback={<p className="text-gray-400 text-sm">검색 중...</p>}>
         <SearchResults q={q} />
       </Suspense>

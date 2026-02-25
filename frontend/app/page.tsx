@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { getDeals, getHotDeals, getCategories, getTrendingDeals } from "@/lib/api";
+import { getDeals, getHotDeals, getCategories, getTrendingDeals, getPopularSearches } from "@/lib/api";
 import InfiniteDealsClient from "@/components/InfiniteDealsClient";
 import HotBanner from "@/components/HotBanner";
 import SortBar from "@/components/SortBar";
@@ -14,6 +14,7 @@ import PriceFilter from "@/components/PriceFilter";
 import RecentDeals from "@/components/RecentDeals";
 import { DealGridSkeleton } from "@/components/DealCardSkeleton";
 import TodayBest from "@/components/TodayBest";
+import PopularSearchTags from "@/components/PopularSearchTags";
 
 interface SearchParams {
   sort?: string;
@@ -35,7 +36,7 @@ export default async function HomePage({
   const priceMax = Number(params.price_max || 0);
   const isFiltered = !!(params.category || params.source || params.search || params.hot_only || priceMin || priceMax);
 
-  const [dealsData, hotDeals, categories, trendingDeals] = await Promise.all([
+  const [dealsData, hotDeals, categories, trendingDeals, popularSearches] = await Promise.all([
     getDeals({
       page: 1,
       size: 20,
@@ -50,6 +51,7 @@ export default async function HomePage({
     isFiltered ? Promise.resolve([]) : getHotDeals().catch(() => []),
     getCategories().catch(() => []),
     isFiltered ? Promise.resolve([]) : getTrendingDeals().catch(() => []),
+    getPopularSearches().catch(() => []),
   ]);
 
   // ItemList 구조화 데이터 — Google 검색에 딜 목록 노출
@@ -148,6 +150,11 @@ export default async function HomePage({
         <Suspense fallback={null}>
           <SortBar total={dealsData.total} />
         </Suspense>
+
+        {/* C-002: 인기 검색어 태그 위젯 — 항상 표시 */}
+        {popularSearches.length > 0 && (
+          <PopularSearchTags searches={popularSearches} />
+        )}
 
         {/* 지금 인기 TOP 3 */}
         {!isFiltered && <TrendingSection deals={trendingDeals} />}

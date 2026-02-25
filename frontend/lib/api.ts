@@ -15,6 +15,10 @@ export interface Deal {
   status: "active" | "expired" | "price_changed" | "pending";
   upvotes: number;
   views: number;
+  today_views: number;    // C-001: 오늘 조회수 (N명 관심)
+  total_views: number;    // C-001: 누적 조회수
+  today_clicks: number;   // C-009: 오늘 클릭수
+  total_clicks: number;   // C-009: 누적 클릭수 (N명 클릭)
   is_hot: boolean;
   submitter_name?: string;
   expires_at?: string;
@@ -196,6 +200,20 @@ export async function getDeal(id: number): Promise<Deal & { price_stats?: any; t
 
 export async function getRelatedDeals(id: number): Promise<Deal[]> {
   const res = await fetch(`${API_BASE}/api/deals/${id}/related`, { next: { revalidate: 300 } });
+  if (!res.ok) return [];
+  return res.json();
+}
+
+// C-002: 인기 검색어
+export interface PopularSearch {
+  keyword: string;
+  count: number;
+}
+
+export async function getPopularSearches(): Promise<PopularSearch[]> {
+  const res = await fetch(`${API_BASE}/api/search/popular`, {
+    next: { revalidate: 300 },
+  });
   if (!res.ok) return [];
   return res.json();
 }

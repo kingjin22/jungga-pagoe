@@ -1,6 +1,6 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://jungga-pagoe-production.up.railway.app";
 
-type EventType = "impression" | "deal_open" | "outbound_click" | "page_view";
+type EventType = "impression" | "deal_open" | "outbound_click" | "page_view" | "search";
 
 function getSessionId(): string {
   if (typeof window === "undefined") return "";
@@ -41,5 +41,25 @@ export async function trackEvent(
     });
   } catch {
     // silently ignore tracking errors
+  }
+}
+
+// C-002: 검색어 로깅 (keyword를 referrer 필드에 저장)
+export async function logSearch(keyword: string): Promise<void> {
+  if (typeof window === "undefined" || !keyword.trim()) return;
+  try {
+    await fetch(`${API_BASE}/api/events`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        event_type: "search",
+        deal_id: null,
+        session_id: getSessionId(),
+        referrer: keyword.trim().toLowerCase(),
+      }),
+      keepalive: true,
+    });
+  } catch {
+    // silently ignore
   }
 }

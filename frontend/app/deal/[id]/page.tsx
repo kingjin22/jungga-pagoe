@@ -323,6 +323,15 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
               ← 다른 딜 보기
             </Link>
 
+            {/* C-001: N명 관심 배지 */}
+            {(deal.today_views ?? 0) >= 5 && (
+              <div className="flex justify-center mt-3">
+                <span className="text-[11px] font-semibold text-orange-600 bg-orange-50 border border-orange-100 px-2.5 py-1 rounded-sm">
+                  👁 지금 {deal.today_views}명이 관심을 보고 있어요
+                </span>
+              </div>
+            )}
+
             {/* 조회수 + 등록 시간 */}
             <div className="flex items-center justify-center gap-3 mt-3">
               {(deal.views ?? 0) > 0 && (

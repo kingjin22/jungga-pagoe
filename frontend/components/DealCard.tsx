@@ -335,6 +335,22 @@ export default function DealCard({ deal, onClick, onDismiss }: DealCardProps) {
           </p>
         ) : null}
 
+        {/* C-001 + C-009: 관심/클릭 배지 */}
+        {((deal.today_views ?? 0) >= 5 || (deal.total_clicks ?? 0) >= 100) && (
+          <div className="flex flex-wrap gap-1 mt-1.5">
+            {(deal.today_views ?? 0) >= 5 && (
+              <span className="text-[10px] font-semibold text-orange-600 bg-orange-50 border border-orange-100 px-1.5 py-0.5 leading-tight">
+                👁 {deal.today_views}명 관심
+              </span>
+            )}
+            {(deal.total_clicks ?? 0) >= 100 && (
+              <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 border border-blue-100 px-1.5 py-0.5 leading-tight">
+                🛒 {deal.total_clicks!.toLocaleString()}명 클릭
+              </span>
+            )}
+          </div>
+        )}
+
         {/* 하단: 조회 + 추천 */}
         <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
           {(deal.views ?? 0) >= 10 && (
