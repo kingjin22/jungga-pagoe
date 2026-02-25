@@ -27,12 +27,14 @@ export default function InfiniteDealsClient({ initialDeals, filterParams }: Prop
   const [offset, setOffset] = useState(initialDeals.length);
   const [hasMore, setHasMore] = useState(initialDeals.length >= PAGE_SIZE);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
   const loaderRef = useRef<HTMLDivElement>(null);
 
   const loadMore = useCallback(async () => {
     if (loading || !hasMore) return;
     setLoading(true);
+    setError(false);
     try {
       const q = new URLSearchParams({
         offset: String(offset),
@@ -54,22 +56,28 @@ export default function InfiniteDealsClient({ initialDeals, filterParams }: Prop
       setDeals((prev) => [...prev, ...newDeals]);
       setOffset((prev) => prev + newDeals.length);
     } catch {
-      setHasMore(false); // 오류 시 더 이상 시도 안 함
+      // 에러 발생 시 hasMore 유지 → 사용자가 retry 가능
+      setError(true);
     } finally {
       setLoading(false);
     }
   }, [loading, hasMore, offset, filterParams]);
 
+  const handleRetry = () => {
+    setError(false);
+    loadMore();
+  };
+
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting) loadMore();
+        if (entries[0].isIntersecting && !error) loadMore();
       },
       { threshold: 0.1 }
     );
     if (loaderRef.current) observer.observe(loaderRef.current);
     return () => observer.disconnect();
-  }, [loadMore]);
+  }, [loadMore, error]);
 
   return (
     <>
@@ -86,9 +94,26 @@ export default function InfiniteDealsClient({ initialDeals, filterParams }: Prop
         </div>
       )}
 
+      {/* 에러 상태 — 재시도 버튼 */}
+      {error && (
+        <div className="flex flex-col items-center gap-3 py-8 mt-4">
+          <p className="text-sm text-gray-400">딜을 불러오는 중 문제가 발생했습니다</p>
+          <button
+            onClick={handleRetry}
+            className="flex items-center gap-1.5 text-sm font-semibold text-gray-700 border border-gray-300 px-4 py-2 hover:border-gray-700 hover:text-black transition-colors active:scale-95"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="23 4 23 10 17 10" />
+              <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+            </svg>
+            다시 불러오기
+          </button>
+        </div>
+      )}
+
       {/* IntersectionObserver 트리거 영역 */}
       <div ref={loaderRef} className="h-10 flex items-center justify-center mt-4">
-        {!hasMore && deals.length > 0 && (
+        {!hasMore && !error && deals.length > 0 && (
           <span className="text-[12px] text-gray-300">모든 딜을 확인했습니다</span>
         )}
       </div>

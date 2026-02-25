@@ -97,3 +97,9 @@ input:focus, select:focus, textarea:focus {
 .btn-brand:hover {
   background: #c01920;
 }
+
+/* 스켈레톤 shimmer 애니메이션 */
+@keyframes shimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
