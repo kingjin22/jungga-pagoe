@@ -186,7 +186,7 @@ export default function DealCard({ deal, onClick, onDismiss }: DealCardProps) {
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
-      className="deal-card group relative cursor-pointer hover:shadow-md transition-shadow duration-200"
+      className="deal-card group relative cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all duration-200"
       onClick={handleCardClick}
     >
       {/* 왼쪽 스와이프 힌트 (빨간 X) */}
@@ -240,7 +240,7 @@ export default function DealCard({ deal, onClick, onDismiss }: DealCardProps) {
             HOT딜
           </div>
         ) : deal.discount_rate > 0 ? (
-          <div className="absolute top-0 left-0 bg-[#E31E24] text-white text-[11px] font-bold px-2.5 py-1.5 leading-none">
+          <div className="absolute top-0 left-0 bg-gradient-to-r from-red-500 to-orange-500 text-white text-[12px] font-black px-2.5 py-1.5 leading-none shadow-sm">
             -{Math.round(deal.discount_rate)}%
           </div>
         ) : deal.source === "community" ? (
@@ -276,8 +276,13 @@ export default function DealCard({ deal, onClick, onDismiss }: DealCardProps) {
               {retailer}
             </span>
           ) : (
-            <span className="bg-black/65 text-white text-[10px] font-medium px-1.5 py-0.5 leading-tight">
-              {deal.source === "naver" ? "네이버" : deal.source === "coupang" ? "쿠팡" : "커뮤니티"}
+            <span className={`text-[10px] font-medium px-1.5 py-0.5 leading-tight ${
+              deal.source === "watchlist" ? "bg-purple-600/80 text-white" :
+              deal.source === "naver" ? "bg-green-600/80 text-white" :
+              deal.source === "community" ? "bg-blue-600/80 text-white" :
+              "bg-black/65 text-white"
+            }`}>
+              {deal.source === "naver" ? "네이버" : deal.source === "coupang" ? "쿠팡" : deal.source === "watchlist" ? "워치리스트" : "커뮤니티"}
             </span>
           )}
         </div>
@@ -359,7 +364,11 @@ export default function DealCard({ deal, onClick, onDismiss }: DealCardProps) {
           target="_blank"
           rel="noopener noreferrer sponsored"
           onClick={(e) => { e.stopPropagation(); trackEvent("outbound_click", deal.id); }}
-          className="block mt-2 text-center border border-gray-200 text-[12px] font-semibold py-2 text-gray-700 hover:border-gray-900 hover:text-black transition-colors"
+          className={`block mt-2 text-center text-[12px] font-bold py-2.5 transition-all active:scale-95 ${
+            deal.is_hot || deal.discount_rate >= 40
+              ? "bg-gradient-to-r from-red-500 to-orange-500 text-white hover:from-red-600 hover:to-orange-600 shadow-sm"
+              : "border border-gray-200 text-gray-700 hover:border-gray-900 hover:text-black"
+          }`}
         >
           {isFree ? "받으러 가기" : deal.source === "community" ? "딜 보러가기" : "지금 최저가 구매"}
         </a>

@@ -33,8 +33,9 @@ export default function Header({ categories = [] }: HeaderProps) {
       {/* 최상단 바 */}
       <div className="bg-[#111] text-white">
         <div className="max-w-screen-xl mx-auto px-4 py-2 flex items-center justify-between">
-          <Link href="/" className="font-black text-xl tracking-tight text-white">
-            정가파괴
+          <Link href="/" className="flex items-baseline gap-2">
+            <span className="font-black text-xl tracking-tight text-white">정가파괴</span>
+            <span className="hidden sm:block text-[11px] text-gray-400 font-normal">실시간 핫딜 · 역대 최저가</span>
           </Link>
 
           <div className="flex items-center gap-4">

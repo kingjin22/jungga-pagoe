@@ -74,6 +74,25 @@ export default async function HomePage({
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }} />
       )}
       <PageViewTracker />
+
+      {/* 히어로 배너 — 필터 없을 때만 */}
+      {!isFiltered && (
+        <div className="bg-gradient-to-r from-red-600 to-orange-500 text-white">
+          <div className="max-w-screen-xl mx-auto px-4 py-5 flex items-center justify-between">
+            <div>
+              <h1 className="text-lg font-black tracking-tight">🔥 매일 업데이트되는 역대 최저가</h1>
+              <p className="text-sm text-red-100 mt-0.5">정가 대비 진짜 할인만 · 커뮤니티 딜 실시간 수집</p>
+            </div>
+            <Link
+              href="/?hot_only=true"
+              className="hidden sm:block bg-white text-red-600 text-sm font-bold px-4 py-2 rounded-full hover:bg-red-50 transition-colors whitespace-nowrap"
+            >
+              HOT딜 보기
+            </Link>
+          </div>
+        </div>
+      )}
+
       {/* 통계 바 */}
       <Suspense fallback={null}>
         <StatsBar />
