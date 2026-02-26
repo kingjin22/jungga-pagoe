@@ -15,6 +15,7 @@ import RecentDeals from "@/components/RecentDeals";
 import { DealGridSkeleton } from "@/components/DealCardSkeleton";
 import TodayBest from "@/components/TodayBest";
 import PopularSearchTags from "@/components/PopularSearchTags";
+import SeasonBanner from "@/components/SeasonBanner";
 
 interface SearchParams {
   sort?: string;
@@ -155,6 +156,9 @@ export default async function HomePage({
         {popularSearches.length > 0 && (
           <PopularSearchTags searches={popularSearches} />
         )}
+
+        {/* C-013: 시즌 특화 큐레이션 배너 */}
+        {!isFiltered && <SeasonBanner />}
 
         {/* 지금 인기 TOP 3 */}
         {!isFiltered && <TrendingSection deals={trendingDeals} />}
