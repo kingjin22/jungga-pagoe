@@ -16,6 +16,7 @@ import { DealGridSkeleton } from "@/components/DealCardSkeleton";
 import TodayBest from "@/components/TodayBest";
 import PopularSearchTags from "@/components/PopularSearchTags";
 import SeasonBanner from "@/components/SeasonBanner";
+import SourceTabs from "@/components/SourceTabs";
 
 interface SearchParams {
   sort?: string;
@@ -159,6 +160,9 @@ export default async function HomePage({
 
         {/* C-013: 시즌 특화 큐레이션 배너 */}
         {!isFiltered && <SeasonBanner />}
+
+        {/* C-014: 소스별 채널 탭 필터 (알구몬식) — 전체 탭이 기본 선택 */}
+        <SourceTabs activeSource={params.source} />
 
         {/* 지금 인기 TOP 3 */}
         {!isFiltered && <TrendingSection deals={trendingDeals} />}

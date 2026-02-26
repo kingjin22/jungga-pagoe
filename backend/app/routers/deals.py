@@ -28,6 +28,44 @@ async def get_deals(
     )
 
 
+@router.get("/sources")
+async def get_deal_sources():
+    """딜 소스별 통계 — 소스 탭 필터에 사용 (C-014)"""
+    sb = db.get_supabase()
+    SOURCE_LABELS: dict[str, str] = {
+        "naver": "네이버",
+        "clien": "클리앙",
+        "ruliweb": "루리웹",
+        "quasarzone": "퀘이사존",
+        "community": "커뮤니티",
+        "manual": "직접등록",
+        "coupang": "쿠팡",
+        "ppomppu": "뽐뿌",
+    }
+    try:
+        res = (
+            sb.table("deals")
+            .select("source")
+            .eq("status", "active")
+            .execute()
+        )
+        counts: dict[str, int] = {}
+        for row in (res.data or []):
+            src = row.get("source") or "기타"
+            counts[src] = counts.get(src, 0) + 1
+
+        result = []
+        for source, count in sorted(counts.items(), key=lambda x: -x[1]):
+            result.append({
+                "source": source,
+                "label": SOURCE_LABELS.get(source, "기타"),
+                "count": count,
+            })
+        return result
+    except Exception:
+        return []
+
+
 @router.get("/hot")
 async def get_hot_deals():
     return db.get_hot_deals(limit=10)
