@@ -338,6 +338,39 @@ async def sync_coupang_deals():
     return {"synced": created, "message": f"{created}개 쿠팡 딜 동기화 완료"}
 
 
+@router.post("/sync/clien")
+async def sync_clien_deals():
+    """클리앙 핫딜 수동 동기화 (스케줄러 2시간 주기와 동일 로직)"""
+    from app.scheduler import _sync_clien
+    await _sync_clien()
+    return {"message": "클리앙 동기화 완료"}
+
+
+@router.post("/sync/ruliweb")
+async def sync_ruliweb_deals():
+    """루리웹 핫딜 수동 동기화 (스케줄러 2시간 주기와 동일 로직)"""
+    from app.scheduler import _sync_ruliweb
+    await _sync_ruliweb()
+    return {"message": "루리웹 동기화 완료"}
+
+
+@router.post("/sync/quasarzone")
+async def sync_quasarzone_deals():
+    """퀘이사존 수동 동기화 — Railway 환경 접근 가능 여부 진단용"""
+    from app.scheduler import _sync_quasarzone
+    await _sync_quasarzone()
+    # DB에서 최근 퀘이사존 딜 확인
+    sb = db.get_supabase()
+    recent = sb.table("deals").select("id,title,created_at") \
+        .ilike("submitter_name", "%퀘이사존%") \
+        .order("created_at", desc=True).limit(5).execute()
+    return {
+        "message": "퀘이사존 동기화 완료",
+        "recent_deals": len(recent.data),
+        "samples": [d["title"][:50] for d in recent.data]
+    }
+
+
 async def _convert_to_affiliate_bg(product_url: str, payload: dict):
     from app.services.coupang import get_affiliate_link
     affiliate_url = await get_affiliate_link(product_url)
