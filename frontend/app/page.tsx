@@ -164,6 +164,30 @@ export default async function HomePage({
         {/* C-014: 소스별 채널 탭 필터 (알구몬식) — 전체 탭이 기본 선택 */}
         <SourceTabs activeSource={params.source} />
 
+        {/* 특별 섹션 링크 — C-008, C-011 */}
+        {!isFiltered && (
+          <div className="flex gap-2 flex-wrap mb-4">
+            <Link
+              href="/group-buy"
+              className="flex items-center gap-1.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-full transition-colors"
+            >
+              🛒 공동구매
+            </Link>
+            <Link
+              href="/gifticon"
+              className="flex items-center gap-1.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-full transition-colors"
+            >
+              🎁 기프티콘·상품권
+            </Link>
+            <Link
+              href="/weekly-top"
+              className="flex items-center gap-1.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-full transition-colors"
+            >
+              📅 위클리 TOP
+            </Link>
+          </div>
+        )}
+
         {/* 지금 인기 TOP 3 */}
         {!isFiltered && <TrendingSection deals={trendingDeals} />}
 
