@@ -34,6 +34,13 @@ export const CATEGORIES: Record<string, { name: string; slug: string; desc: stri
     desc: "라로슈포제, 설화수, 다이슨 뷰티 등 코스메틱 최저가 할인 정보.",
     keywords: "화장품 할인, 스킨케어 최저가, 뷰티 세일"
   },
+  "생활용품": {
+    name: "생활용품",
+    slug: "daily",
+    emoji: "🧴",
+    desc: "화장지, 물티슈, 위생용품, 생활필수품 최저가 할인 정보.",
+    keywords: "화장지 할인, 물티슈 최저가, 생활용품 특가"
+  },
 };
 
 export function getCategoryBySlug(slug: string) {
