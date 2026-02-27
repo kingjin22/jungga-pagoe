@@ -41,16 +41,11 @@ export default function SeasonBanner() {
       >
         <div className="px-4 py-4 flex items-center justify-between">
           <div>
-            <div className="flex items-center gap-2 mb-0.5">
-              <span className="text-[10px] font-bold text-pink-500 tracking-widest uppercase">
-                SEASON DEAL
-              </span>
-            </div>
             <h3 className="text-base font-black text-gray-800 leading-tight">
               {currentSeason.emoji} {currentSeason.name} 특가 모음
             </h3>
             <p className="text-[12px] text-gray-500 mt-0.5">
-              새 학기 준비, 지금이 찬스 🎯
+              봄맞이 할인, 지금 딱이에요 🌸
             </p>
           </div>
           <div className="flex flex-col items-end gap-1">

@@ -249,13 +249,13 @@ export default function DealCard({ deal, onClick, onDismiss }: DealCardProps) {
           </div>
         ) : null}
 
-        {/* 남은시간 배지 (24h 이내) / 마감임박 */}
+        {/* 남은시간 배지 (24h 이내, is_hot 아닐 때만) / 마감임박 */}
         {(isWithin24h && !deal.is_hot) && (
           <div className="absolute top-0 right-0 leading-none">
             <TimeLeftBadge createdAt={deal.created_at} />
           </div>
         )}
-        {isExpiringSoon && (
+        {isExpiringSoon && !deal.is_hot && (
           <div className={`absolute ${(isWithin24h && !deal.is_hot) ? "top-5" : "top-0"} right-0 bg-orange-500 text-white text-[9px] font-bold px-1.5 py-0.5 leading-none`}>
             마감임박
           </div>
@@ -335,19 +335,18 @@ export default function DealCard({ deal, onClick, onDismiss }: DealCardProps) {
           </p>
         ) : null}
 
-        {/* C-001 + C-009: 관심/클릭 배지 */}
+        {/* C-001 + C-009: 관심/클릭 배지 — today_views 있으면 우선 표시 */}
         {((deal.today_views ?? 0) >= 5 || (deal.total_clicks ?? 0) >= 100) && (
           <div className="flex flex-wrap gap-1 mt-1.5">
-            {(deal.today_views ?? 0) >= 5 && (
+            {(deal.today_views ?? 0) >= 5 ? (
               <span className="text-[10px] font-semibold text-orange-600 bg-orange-50 border border-orange-100 px-1.5 py-0.5 leading-tight">
                 👁 {deal.today_views}명 관심
               </span>
-            )}
-            {(deal.total_clicks ?? 0) >= 100 && (
+            ) : (deal.total_clicks ?? 0) >= 100 ? (
               <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 border border-blue-100 px-1.5 py-0.5 leading-tight">
                 🛒 {deal.total_clicks!.toLocaleString()}명 클릭
               </span>
-            )}
+            ) : null}
           </div>
         )}
 
@@ -394,7 +393,7 @@ export default function DealCard({ deal, onClick, onDismiss }: DealCardProps) {
                 : "border border-gray-200 text-gray-700 hover:border-gray-900 hover:text-black"
             }`}
           >
-            {isFree ? "받으러 가기" : deal.source === "community" ? "딜 보러가기" : "지금 최저가 구매"}
+            {isFree ? "받기" : deal.source === "community" ? "보러가기" : "구매하기"}
           </a>
         ) : (
           <span

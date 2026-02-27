@@ -132,6 +132,18 @@ export default function Header({ categories = [] }: HeaderProps) {
                 </Link>
               );
             })}
+
+            {/* 구분선 + 특별 섹션 링크 */}
+            <span className="self-center mx-1 text-gray-200 text-lg select-none">|</span>
+            <Link href="/group-buy" className="shrink-0 px-4 py-3 text-sm text-gray-500 border-b-2 border-transparent whitespace-nowrap hover:text-gray-900">
+              🛒 공구
+            </Link>
+            <Link href="/gifticon" className="shrink-0 px-4 py-3 text-sm text-gray-500 border-b-2 border-transparent whitespace-nowrap hover:text-gray-900">
+              🎁 기프티콘
+            </Link>
+            <Link href="/raffle" className="shrink-0 px-4 py-3 text-sm text-gray-500 border-b-2 border-transparent whitespace-nowrap hover:text-gray-900">
+              🎯 래플
+            </Link>
           </nav>
         </div>
       </div>

@@ -3,7 +3,6 @@ import { getDeals, getHotDeals, getCategories, getTrendingDeals, getPopularSearc
 import InfiniteDealsClient from "@/components/InfiniteDealsClient";
 import HotBanner from "@/components/HotBanner";
 import SortBar from "@/components/SortBar";
-import StatsBar from "@/components/StatsBar";
 import StickyFilter from "@/components/StickyFilter";
 import PageViewTracker from "@/components/PageViewTracker";
 import AdBanner from "@/components/AdBanner";
@@ -13,7 +12,6 @@ import TrendingSection from "@/components/TrendingSection";
 import PriceFilter from "@/components/PriceFilter";
 import RecentDeals from "@/components/RecentDeals";
 import { DealGridSkeleton } from "@/components/DealCardSkeleton";
-import TodayBest from "@/components/TodayBest";
 import PopularSearchTags from "@/components/PopularSearchTags";
 import SeasonBanner from "@/components/SeasonBanner";
 import SourceTabs from "@/components/SourceTabs";
@@ -84,8 +82,8 @@ export default async function HomePage({
         <div className="bg-gradient-to-r from-red-600 to-orange-500 text-white">
           <div className="max-w-screen-xl mx-auto px-4 py-5 flex items-center justify-between">
             <div>
-              <h1 className="text-lg font-black tracking-tight">🔥 매일 업데이트되는 역대 최저가</h1>
-              <p className="text-sm text-red-100 mt-0.5">정가 대비 진짜 할인만 · 커뮤니티 딜 실시간 수집</p>
+              <h1 className="text-lg font-black tracking-tight">오늘도 쏟아지는 진짜 핫딜</h1>
+              <p className="text-sm text-red-100 mt-0.5">정가 대비 진짜 할인, 직접 검증해요</p>
             </div>
             <Link
               href="/?hot_only=true"
@@ -96,11 +94,6 @@ export default async function HomePage({
           </div>
         </div>
       )}
-
-      {/* 통계 바 */}
-      <Suspense fallback={null}>
-        <StatsBar />
-      </Suspense>
 
       {/* 핫딜 배너 */}
       {!isFiltered && hotDeals.length > 0 && (
@@ -131,13 +124,6 @@ export default async function HomePage({
           </div>
         )}
 
-        {/* 섹션 헤더 */}
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="text-lg font-black text-gray-900">
-            {params.hot_only === "true" ? "HOT딜" : isFiltered ? "검색 결과" : "전체 딜"}
-          </h2>
-        </div>
-
         {/* 카테고리 필터 — 스티키 */}
         <Suspense fallback={null}>
           <StickyFilter categories={categories} />
@@ -164,53 +150,16 @@ export default async function HomePage({
         {/* C-014: 소스별 채널 탭 필터 (알구몬식) — 전체 탭이 기본 선택 */}
         <SourceTabs activeSource={params.source} />
 
-        {/* 특별 섹션 링크 — C-008, C-011 */}
-        {!isFiltered && (
-          <div className="flex gap-2 flex-wrap mb-4">
-            <Link
-              href="/group-buy"
-              className="flex items-center gap-1.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-full transition-colors"
-            >
-              🛒 공동구매
-            </Link>
-            <Link
-              href="/gifticon"
-              className="flex items-center gap-1.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-full transition-colors"
-            >
-              🎁 기프티콘·상품권
-            </Link>
-            <Link
-              href="/weekly-top"
-              className="flex items-center gap-1.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-full transition-colors"
-            >
-              📅 위클리 TOP
-            </Link>
-            <Link
-              href="/raffle"
-              className="flex items-center gap-1.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-full transition-colors"
-            >
-              🎯 래플·한정판
-            </Link>
-          </div>
-        )}
-
         {/* 지금 인기 TOP 3 */}
         {!isFiltered && <TrendingSection deals={trendingDeals} />}
 
         {/* 최근 본 딜 */}
         {!isFiltered && <RecentDeals />}
 
-        {/* 오늘의 베스트딜 */}
-        {!isFiltered && (
-          <Suspense fallback={null}>
-            <TodayBest />
-          </Suspense>
-        )}
-
         {/* 딜 그리드 (무한 스크롤) */}
         {dealsData.items.length === 0 ? (
           <div className="text-center py-24">
-            <p className="text-gray-300 text-5xl mb-4">ø</p>
+            <p className="text-5xl mb-4">🤔</p>
             <p className="text-gray-500 text-sm">
               {params.search
                 ? "검색 결과가 없습니다. 다른 키워드로 시도해보세요."
