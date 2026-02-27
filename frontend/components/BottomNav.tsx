@@ -33,6 +33,9 @@ const tabs = [
   { href: "/coupon", label: "쿠폰", icon: (_active: boolean) => (
     <span className="text-[18px] leading-none">🎫</span>
   )},
+  { href: "/preorder", label: "사전구매", icon: (_active: boolean) => (
+    <span className="text-[18px] leading-none">🚀</span>
+  )},
   { href: "/favorites", label: "찜", icon: (active: boolean) => (
     <svg width="22" height="22" viewBox="0 0 24 24"
       fill={active ? "currentColor" : "none"}
@@ -50,7 +53,7 @@ export default function BottomNav() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 md:hidden">
-      <div className="grid grid-cols-6 h-14">
+      <div className="grid grid-cols-7 h-14">
         {tabs.map(tab => {
           const isActive = tab.href === "/" ? pathname === "/" : pathname.startsWith(tab.href.split("?")[0]);
           return (
