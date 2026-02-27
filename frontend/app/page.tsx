@@ -185,6 +185,12 @@ export default async function HomePage({
             >
               📅 위클리 TOP
             </Link>
+            <Link
+              href="/raffle"
+              className="flex items-center gap-1.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-full transition-colors"
+            >
+              🎯 래플·한정판
+            </Link>
           </div>
         )}
 

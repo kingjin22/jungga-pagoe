@@ -374,6 +374,13 @@ export default function DealCard({ deal, onClick, onDismiss }: DealCardProps) {
           </button>
         </div>
 
+        {/* C-015: 제휴마케팅 투명성 배지 */}
+        {(deal.source === "coupang" ||
+          (deal.affiliate_url && deal.affiliate_url.includes("coupang.com")) ||
+          (deal.product_url && deal.product_url.includes("partners.coupang.com"))) && (
+          <span className="text-xs text-gray-300">파트너스 광고</span>
+        )}
+
         {/* 구매 링크 */}
         {targetUrl ? (
           <a
