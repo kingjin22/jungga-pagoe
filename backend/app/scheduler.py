@@ -60,159 +60,78 @@ async def _sync_naver():
 
 
 async def _sync_ppomppu():
-    """
-    뽐뿌 핫딜 수집 — Playwright 실시간 가격 검증
-
-    파이프라인:
-    1. RSS 파싱 → 제목/가격/ppomppu 포스트 URL
-    2. 각 포스트 Playwright 렌더링 → 실제 쇼핑몰 URL 추출
-    3. 실제 쇼핑몰 현재가 크롤링
-    4. 커뮤니티 제시가 vs 실제가 비교 (±10%) → 불일치면 스킵
-    5. 통과한 딜만 실제 쇼핑몰 URL로 저장
-    """
+    """뽐뿌 핫딜 RSS 수집 — 10분마다 (Playwright 없이, 클리앙 패턴)"""
     try:
         import app.db_supabase as db
         from app.services.ppomppu import fetch_ppomppu_deals
-        from app.services.price_scrapers.playwright_scraper import (
-            fetch_retailer_url_from_ppomppu, get_actual_price
-        )
-        from playwright.async_api import async_playwright
 
         deals_data = await fetch_ppomppu_deals()
         created = skipped = 0
-        PRICE_TOLERANCE = 0.10  # 10% 오차 허용
 
-        async with async_playwright() as pw:
-            browser = await pw.chromium.launch(
-                headless=True,
-                args=["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu",
-                      "--disable-blink-features=AutomationControlled"],
-            )
-            ctx = await browser.new_context(
-                user_agent=(
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
-                ),
-                locale="ko-KR",
-                viewport={"width": 1280, "height": 800},
-            )
-            page = await ctx.new_page()
-            await page.add_init_script(
-                "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
-            )
+        for item in deals_data:
+            source_post_url = item.get("source_post_url", "")
 
-            for item in deals_data:
-                sale = float(item.get("sale_price") or 0)
-                is_free = sale == 0
-                # fetch_ppomppu_deals()는 "source_post_url" 키로 뽐뿌 URL 반환
-                ppomppu_url = item.get("source_post_url") or item.get("ppomppu_url") or ""
+            # 이미 수집된 원글 스킵
+            if source_post_url and db.deal_url_exists(source_post_url):
+                skipped += 1
+                continue
 
-                # 이미 수집된 포스트 스킵
-                if ppomppu_url and db.deal_url_exists(ppomppu_url):
-                    skipped += 1
-                    continue
+            sale = float(item.get("sale_price") or 0)
+            is_free = sale == 0
 
-                # ── 무료딜 (가격 검증 불필요) ─────────────────
-                if is_free and ppomppu_url:
-                    if not db.deal_url_exists(ppomppu_url):
-                        db.create_deal({
-                            "title": item["title"],
-                            "original_price": 0,
-                            "sale_price": 0,
-                            "discount_rate": 100,
-                            "image_url": item.get("image_url"),
-                            "product_url": ppomppu_url,
-                            "source": "community",
-                            "category": item.get("category", "기타"),
-                            "status": "active",
-                            "is_hot": False,
-                            "submitter_name": item.get("submitter_name", "뽐뿌"),
-                        })
-                        created += 1
-                    continue
-
-                if sale <= 0 or not ppomppu_url:
-                    skipped += 1
-                    continue
-
-                # ── 실제 쇼핑몰 URL 추출 ──────────────────────
-                from app.services.price_scrapers.playwright_scraper import PPOMPPU_ENDED_SENTINEL
-                retailer_url = await fetch_retailer_url_from_ppomppu(ppomppu_url, playwright_page=page)
-                if retailer_url == PPOMPPU_ENDED_SENTINEL:
-                    logger.info(f"[뽐뿌품절] 종결된 게시물 스킵: {item['title'][:40]}")
-                    skipped += 1
-                    continue
-                if not retailer_url:
-                    logger.debug(f"[뽐뿌skip] 쇼핑몰 URL 없음: {item['title'][:40]}")
-                    skipped += 1
-                    continue
-
-                if db.deal_url_exists(retailer_url):
-                    skipped += 1
-                    continue
-
-                # ── 실제 현재가 크롤링 ────────────────────────
-                actual = await get_actual_price(retailer_url, playwright_page=page)
-
-                if actual is None:
-                    # 크롤링 실패 → 수집 스킵 (신뢰 불가)
-                    logger.debug(f"[뽐뿌skip] 가격 크롤링 실패: {item['title'][:40]}")
-                    skipped += 1
-                    continue
-
-                if not actual.in_stock:
-                    logger.debug(f"[뽐뿌skip] 품절: {item['title'][:40]}")
-                    skipped += 1
-                    continue
-
-                # ── 가격 일치 검증 ────────────────────────────
-                price_diff = abs(actual.price - sale) / sale
-                if price_diff > PRICE_TOLERANCE:
-                    logger.info(
-                        f"[뽐뿌skip] 가격 불일치: 제시={sale:,.0f} 실제={actual.price:,.0f} "
-                        f"({price_diff*100:.0f}%) | {item['title'][:35]}"
-                    )
-                    skipped += 1
-                    continue
-
-                # ── 중복 체크 ─────────────────────────────────
-                if db.deal_duplicate_exists(item["title"], sale):
-                    skipped += 1
-                    continue
-
-                # ── 할인율 계산 (실제가 기준) ──────────────────
-                orig = float(item.get("original_price") or 0)
-                if orig <= 0 or orig <= sale:
-                    skipped += 1
-                    continue
-                discount_rate = round((1 - sale / orig) * 100, 1)
-                if discount_rate < 10:
-                    skipped += 1
-                    continue
-
+            if is_free and source_post_url:
                 db.create_deal({
                     "title": item["title"],
-                    "description": item.get("description"),
-                    "original_price": orig,
-                    "sale_price": sale,
-                    "discount_rate": discount_rate,
+                    "original_price": 0,
+                    "sale_price": 0,
+                    "discount_rate": 100,
                     "image_url": item.get("image_url"),
-                    "product_url": retailer_url,           # 실제 쇼핑몰 URL
-                    "source_post_url": item.get("source_post_url") or ppomppu_url,  # 원글 URL (만료 감지)
+                    "product_url": source_post_url,
+                    "source_post_url": source_post_url,
                     "source": "community",
                     "category": item.get("category", "기타"),
                     "status": "active",
-                    "is_hot": discount_rate >= 20,
+                    "is_hot": False,
                     "submitter_name": item.get("submitter_name", "뽐뿌"),
-                    "admin_note": f"실제가 검증: {actual.price:,}원 ({actual.retailer})",
                 })
-                logger.info(
-                    f"  ✅ 저장: {item['title'][:35]} | -{discount_rate}% | "
-                    f"실제가={actual.price:,}원"
-                )
                 created += 1
+                continue
 
-            await browser.close()
+            if sale <= 0:
+                skipped += 1
+                continue
+
+            orig = float(item.get("original_price") or 0)
+            discount_rate = float(item.get("discount_rate") or 0)
+
+            if orig <= 0 or orig <= sale:
+                skipped += 1
+                continue
+            if discount_rate < 10:
+                skipped += 1
+                continue
+
+            if db.deal_duplicate_exists(item["title"], sale):
+                skipped += 1
+                continue
+
+            db.create_deal({
+                "title": item["title"],
+                "description": item.get("description"),
+                "original_price": orig,
+                "sale_price": sale,
+                "discount_rate": discount_rate,
+                "image_url": item.get("image_url"),
+                "product_url": source_post_url,   # 뽐뿌 포스트 URL 사용 (클리앙 패턴)
+                "source_post_url": source_post_url,
+                "source": "community",
+                "category": item.get("category", "기타"),
+                "status": "active",
+                "is_hot": discount_rate >= 20,
+                "submitter_name": item.get("submitter_name", "뽐뿌"),
+            })
+            logger.info(f"  ✅ [뽐뿌] 저장: {item['title'][:35]} | -{discount_rate}%")
+            created += 1
 
         logger.info(f"✅ 뽐뿌 sync: {created}개 저장 | {skipped}개 제외")
     except Exception as e:
@@ -799,7 +718,7 @@ def start_scheduler():
         _sync_ppomppu,
         trigger=IntervalTrigger(minutes=10),
         id="sync_ppomppu",
-        name="뽐뿌 핫딜 자동 동기화 (비활성)",
+        name="뽐뿌 핫딜 자동 동기화 (10m)",
         replace_existing=True,
     )
     scheduler.add_job(
