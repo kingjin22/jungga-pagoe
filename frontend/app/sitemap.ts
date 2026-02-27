@@ -12,6 +12,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: BASE_URL, lastModified: now, changeFrequency: "hourly", priority: 1.0 },
     { url: `${BASE_URL}/?hot_only=true`, lastModified: now, changeFrequency: "hourly", priority: 0.9 },
     { url: `${BASE_URL}/weekly-top`, lastModified: now, changeFrequency: "daily", priority: 0.85 },
+    { url: `${BASE_URL}/group-buy`, lastModified: now, changeFrequency: "hourly", priority: 0.8 },
+    { url: `${BASE_URL}/gifticon`, lastModified: now, changeFrequency: "hourly", priority: 0.8 },
+    { url: `${BASE_URL}/raffle`, lastModified: now, changeFrequency: "daily", priority: 0.75 },
+    { url: `${BASE_URL}/search`, lastModified: now, changeFrequency: "daily", priority: 0.7 },
+    // 소스별 페이지
+    { url: `${BASE_URL}/source/clien`, lastModified: now, changeFrequency: "hourly", priority: 0.75 },
+    { url: `${BASE_URL}/source/ruliweb`, lastModified: now, changeFrequency: "hourly", priority: 0.75 },
+    { url: `${BASE_URL}/source/quasarzone`, lastModified: now, changeFrequency: "hourly", priority: 0.75 },
+    { url: `${BASE_URL}/source/naver`, lastModified: now, changeFrequency: "hourly", priority: 0.7 },
+    { url: `${BASE_URL}/source/community`, lastModified: now, changeFrequency: "hourly", priority: 0.7 },
   ];
 
   // 브랜드 페이지
