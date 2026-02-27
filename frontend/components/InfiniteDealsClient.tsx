@@ -112,10 +112,34 @@ export default function InfiniteDealsClient({ initialDeals, filterParams }: Prop
       )}
 
       {/* IntersectionObserver 트리거 영역 */}
-      <div ref={loaderRef} className="h-10 flex items-center justify-center mt-4">
+      <div ref={loaderRef} className="mt-4">
         {!hasMore && !error && deals.length > 0 && (
-          <span className="text-[12px] text-gray-300">모든 딜을 확인했습니다</span>
+          <div className="flex flex-col items-center gap-3 py-10 border-t border-gray-100 mt-4">
+            <span className="text-2xl" aria-hidden="true">🎉</span>
+            <p className="text-[13px] font-semibold text-gray-400">
+              오늘 핫딜 {deals.length}개 전부 확인 완료!
+            </p>
+            <p className="text-[11px] text-gray-300 text-center leading-relaxed">
+              새 딜은 매일 업데이트돼요.<br />카테고리별로 찾아보거나 딜을 제보해보세요.
+            </p>
+            <div className="flex gap-2 mt-1">
+              <a
+                href="/categories"
+                className="text-[12px] font-semibold border border-gray-200 text-gray-600 px-4 py-2 hover:border-gray-400 hover:text-gray-900 transition-colors"
+              >
+                카테고리 보기
+              </a>
+              <a
+                href="/submit"
+                className="text-[12px] font-semibold bg-[#E31E24] text-white px-4 py-2 hover:bg-[#c01920] transition-colors"
+              >
+                딜 제보하기
+              </a>
+            </div>
+          </div>
         )}
+        {/* 로딩 중이거나 더 있을 때는 감지용 공간 유지 */}
+        {(hasMore || loading) && <div className="h-10" />}
       </div>
 
       <DealModal deal={selectedDeal} onClose={() => setSelectedDeal(null)} />

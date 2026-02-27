@@ -5,6 +5,7 @@ import Script from "next/script";
 import "./globals.css";
 import Header from "@/components/Header";
 import BottomNav from "@/components/BottomNav";
+import ScrollToTop from "@/components/ScrollToTop";
 import { getCategories } from "@/lib/api";
 
 export const metadata: Metadata = {
@@ -118,6 +119,7 @@ export default async function RootLayout({
           </div>
         </footer>
       <BottomNav />
+      <ScrollToTop />
       <Analytics />
       </body>
     </html>
