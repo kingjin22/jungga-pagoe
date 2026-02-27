@@ -5,16 +5,16 @@ import InfiniteDealsClient from "@/components/InfiniteDealsClient";
 import { DealGridSkeleton } from "@/components/DealCardSkeleton";
 import { Deal } from "@/lib/api";
 
-// C-016: 쿠폰/할인코드 전용 섹션
+// C-016: 쿠폰/할인코드 전용 섹션 (+ 포인트/적립 키워드 추가 2026-02-28)
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL ||
   "https://jungga-pagoe-production.up.railway.app";
 
 export const metadata: Metadata = {
-  title: "쿠폰·할인코드 모음 | 정가파괴",
+  title: "쿠폰·할인코드·포인트 모음 | 정가파괴",
   description:
-    "알리익스프레스·쿠팡·G마켓 쿠폰코드, 프로모션 할인코드를 한곳에서 — 정가파괴",
+    "알리익스프레스·쿠팡·G마켓 쿠폰코드, 프로모션 할인코드, 네이버페이 포인트 적립 정보를 한곳에서 — 정가파괴",
 };
 
 async function fetchDealsBySearch(search: string, size: number): Promise<Deal[]> {
@@ -30,13 +30,15 @@ async function fetchDealsBySearch(search: string, size: number): Promise<Deal[]>
 }
 
 export default async function CouponPage() {
-  // 여러 키워드로 병렬 fetch
-  const [couponKr, discountCode, promotion, couponEn, codeEn] = await Promise.all([
+  // 여러 키워드로 병렬 fetch (포인트/적립 추가 — 네이버페이 포인트 정보 수요 높음)
+  const [couponKr, discountCode, promotion, couponEn, codeEn, pointInfo, jeoklip] = await Promise.all([
     fetchDealsBySearch("쿠폰", 30),
     fetchDealsBySearch("할인코드", 20),
     fetchDealsBySearch("프로모션", 20),
     fetchDealsBySearch("coupon", 20),
     fetchDealsBySearch("code", 20),
+    fetchDealsBySearch("포인트", 20),
+    fetchDealsBySearch("적립", 20),
   ]);
 
   // id 기준 중복 제거 후 합산
@@ -48,6 +50,8 @@ export default async function CouponPage() {
     ...promotion,
     ...couponEn,
     ...codeEn,
+    ...pointInfo,
+    ...jeoklip,
   ]) {
     if (!seenIds.has(deal.id)) {
       seenIds.add(deal.id);
@@ -68,7 +72,7 @@ export default async function CouponPage() {
             ← 전체
           </Link>
           <span className="text-2xl">🎫</span>
-          <h1 className="text-xl font-black text-gray-900">쿠폰·할인코드</h1>
+          <h1 className="text-xl font-black text-gray-900">쿠폰·할인코드·포인트</h1>
           {combinedDeals.length > 0 && (
             <span className="text-sm text-gray-400">
               {combinedDeals.length}개
@@ -76,7 +80,7 @@ export default async function CouponPage() {
           )}
         </div>
         <p className="text-sm text-gray-500 ml-8">
-          알리익스프레스·쿠팡·G마켓 프로모션 코드, 지금 바로 써보세요 🎫
+          알리익스프레스·쿠팡·G마켓 프로모션 코드, 네이버페이 포인트 적립 정보까지 🎫
         </p>
       </div>
 
@@ -84,7 +88,7 @@ export default async function CouponPage() {
       {combinedDeals.length === 0 ? (
         <div className="text-center py-24">
           <p className="text-gray-300 text-5xl mb-4">🎫</p>
-          <p className="text-gray-500 text-sm">현재 쿠폰·할인코드 딜이 없어요.</p>
+          <p className="text-gray-500 text-sm">현재 쿠폰·포인트 딜이 없어요.</p>
           <Link
             href="/"
             className="mt-4 inline-block text-sm text-gray-900 underline underline-offset-2"
