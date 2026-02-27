@@ -431,6 +431,70 @@ async def _sync_clien():
         logger.error(f"❌ 클리앙 sync: {e}")
 
 
+async def _sync_eomisae():
+    """어미새 쇼핑정보 RSS 수집 — 2시간마다"""
+    try:
+        import app.db_supabase as db
+        from app.services.eomisae import fetch_eomisae_deals
+
+        deals_data = await fetch_eomisae_deals()
+        created = skipped = 0
+
+        for item in deals_data:
+            source_post_url = item.get("source_post_url", "")
+
+            # 이미 수집된 원글 스킵
+            if source_post_url and db.deal_url_exists(source_post_url):
+                skipped += 1
+                continue
+
+            product_url = item.get("product_url", "")
+            if product_url and db.deal_url_exists(product_url):
+                skipped += 1
+                continue
+
+            sale = float(item.get("sale_price") or 0)
+            if sale <= 0:
+                skipped += 1
+                continue
+
+            orig = float(item.get("original_price") or 0)
+            discount_rate = float(item.get("discount_rate") or 0)
+
+            if orig <= 0 or orig <= sale:
+                skipped += 1
+                continue
+            if discount_rate < 10:
+                skipped += 1
+                continue
+
+            if db.deal_duplicate_exists(item["title"], sale):
+                skipped += 1
+                continue
+
+            db.create_deal({
+                "title": item["title"],
+                "description": item.get("description"),
+                "original_price": orig,
+                "sale_price": sale,
+                "discount_rate": discount_rate,
+                "image_url": item.get("image_url"),
+                "product_url": product_url or source_post_url,
+                "source_post_url": source_post_url,
+                "source": "community",
+                "category": item.get("category", "기타"),
+                "status": "active",
+                "is_hot": discount_rate >= 20,
+                "submitter_name": item.get("submitter_name", "어미새"),
+            })
+            logger.info(f"  ✅ [어미새] 저장: {item['title'][:35]} | -{discount_rate}%")
+            created += 1
+
+        logger.info(f"✅ 어미새 sync: {created}개 저장 | {skipped}개 제외")
+    except Exception as e:
+        logger.error(f"❌ 어미새 sync: {e}")
+
+
 async def _sync_ruliweb():
     """루리웹 핫딜 RSS 수집 — 2시간마다"""
     try:
@@ -754,6 +818,13 @@ def start_scheduler():
         trigger=IntervalTrigger(hours=2),
         id="sync_clien",
         name="클리앙 핫딜 RSS 동기화 (2h)",
+        replace_existing=True,
+    )
+    scheduler.add_job(
+        _sync_eomisae,
+        trigger=IntervalTrigger(hours=2),
+        id="sync_eomisae",
+        name="어미새 인기정보 RSS 동기화 (2h)",
         replace_existing=True,
     )
     scheduler.add_job(
