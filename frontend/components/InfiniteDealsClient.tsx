@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { Deal } from "@/lib/api";
 import DealCard from "./DealCard";
 import DealModal from "./DealModal";
 import DealCardSkeleton from "./DealCardSkeleton";
+import InlineRecommendSection from "./InlineRecommendSection";
 
 const PAGE_SIZE = 20;
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://jungga-pagoe-production.up.railway.app";
@@ -90,7 +91,7 @@ export default function InfiniteDealsClient({ initialDeals, filterParams }: Prop
         {deals.map((deal, index) => {
           const isNew = newBatchStart !== null && index >= newBatchStart;
           const delay = isNew ? Math.min((index - newBatchStart!) * 40, 400) : 0;
-          return (
+          const card = (
             <div
               key={deal.id}
               style={isNew ? {
@@ -101,6 +102,18 @@ export default function InfiniteDealsClient({ initialDeals, filterParams }: Prop
               <DealCard deal={deal} onClick={setSelectedDeal} />
             </div>
           );
+
+          if (index === 9 && deals.length > 10) {
+            return (
+              <React.Fragment key={deal.id}>
+                {card}
+                <div className="col-span-2 sm:col-span-3 md:col-span-4 lg:col-span-5">
+                  <InlineRecommendSection excludeIds={deals.map((d) => String(d.id))} />
+                </div>
+              </React.Fragment>
+            );
+          }
+          return card;
         })}
       </div>
 
