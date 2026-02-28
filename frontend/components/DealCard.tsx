@@ -149,6 +149,21 @@ export default function DealCard({ deal, onClick, onDismiss }: DealCardProps) {
     onClick?.(deal);
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      handleCardClick();
+    }
+  };
+
+  // 접근성용 카드 요약 레이블
+  const ariaLabel = [
+    deal.title,
+    isFree ? "무료" : formatPrice(deal.sale_price),
+    deal.discount_rate > 0 ? `${Math.round(deal.discount_rate)}% 할인` : null,
+    deal.category,
+  ].filter(Boolean).join(", ");
+
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
   };
@@ -176,6 +191,9 @@ export default function DealCard({ deal, onClick, onDismiss }: DealCardProps) {
   return (
     <div
       ref={cardRef}
+      role="article"
+      tabIndex={0}
+      aria-label={ariaLabel}
       style={{
         transform: isDismissing
           ? "translateX(-110%)"
@@ -186,12 +204,14 @@ export default function DealCard({ deal, onClick, onDismiss }: DealCardProps) {
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
-      className="deal-card group relative cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all duration-200"
+      onKeyDown={handleKeyDown}
+      className="deal-card group relative cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E31E24]"
       onClick={handleCardClick}
     >
       {/* 왼쪽 스와이프 힌트 (빨간 X) */}
       {swipeX < -20 && (
         <div
+          aria-hidden="true"
           className="absolute inset-0 flex items-center justify-end pr-4 rounded-lg bg-red-50 pointer-events-none z-10"
           style={{ opacity: Math.min(1, Math.abs(swipeX) / SWIPE_THRESHOLD) }}
         >
@@ -201,6 +221,7 @@ export default function DealCard({ deal, onClick, onDismiss }: DealCardProps) {
       {/* 오른쪽 스와이프 힌트 (초록 링크) */}
       {swipeX > 20 && (
         <div
+          aria-hidden="true"
           className="absolute inset-0 flex items-center justify-start pl-4 rounded-lg bg-green-50 pointer-events-none z-10"
           style={{ opacity: Math.min(1, swipeX / SWIPE_THRESHOLD) }}
         >
@@ -361,15 +382,17 @@ export default function DealCard({ deal, onClick, onDismiss }: DealCardProps) {
           <button
             onClick={handleUpvote}
             disabled={voted}
+            aria-label={`추천 ${upvotes}개${voted ? " (이미 추천함)" : " — 클릭하여 추천"}`}
+            aria-pressed={voted}
             className={`flex items-center gap-1 text-[11px] font-medium transition-colors ${
               voted ? "text-gray-300" : "text-gray-500 hover:text-[#E31E24]"
             }`}
           >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill={voted ? "#E31E24" : "none"} stroke="currentColor" strokeWidth="2">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill={voted ? "#E31E24" : "none"} stroke="currentColor" strokeWidth="2" aria-hidden="true">
               <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z" />
               <path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
             </svg>
-            {upvotes}
+            <span aria-hidden="true">{upvotes}</span>
           </button>
         </div>
 

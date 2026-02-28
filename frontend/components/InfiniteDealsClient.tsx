@@ -29,6 +29,8 @@ export default function InfiniteDealsClient({ initialDeals, filterParams }: Prop
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
+  // 새로 로드된 배치의 시작 인덱스 — 여기부터 애니메이션 적용
+  const [newBatchStart, setNewBatchStart] = useState<number | null>(null);
   const loaderRef = useRef<HTMLDivElement>(null);
 
   const loadMore = useCallback(async () => {
@@ -53,7 +55,10 @@ export default function InfiniteDealsClient({ initialDeals, filterParams }: Prop
       const data = await res.json();
       const newDeals: Deal[] = data.items ?? [];
       if (newDeals.length < PAGE_SIZE) setHasMore(false);
-      setDeals((prev) => [...prev, ...newDeals]);
+      setDeals((prev) => {
+        setNewBatchStart(prev.length); // 새 배치 시작 위치 기록
+        return [...prev, ...newDeals];
+      });
       setOffset((prev) => prev + newDeals.length);
     } catch {
       // 에러 발생 시 hasMore 유지 → 사용자가 retry 가능
@@ -82,9 +87,21 @@ export default function InfiniteDealsClient({ initialDeals, filterParams }: Prop
   return (
     <>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-4 gap-y-8">
-        {deals.map((deal) => (
-          <DealCard key={deal.id} deal={deal} onClick={setSelectedDeal} />
-        ))}
+        {deals.map((deal, index) => {
+          const isNew = newBatchStart !== null && index >= newBatchStart;
+          const delay = isNew ? Math.min((index - newBatchStart!) * 40, 400) : 0;
+          return (
+            <div
+              key={deal.id}
+              style={isNew ? {
+                animation: `fadeInUp 0.35s ease both`,
+                animationDelay: `${delay}ms`,
+              } : undefined}
+            >
+              <DealCard deal={deal} onClick={setSelectedDeal} />
+            </div>
+          );
+        })}
       </div>
 
       {/* 추가 로딩 스켈레톤 */}
