@@ -156,6 +156,9 @@ export default function Header({ categories = [] }: HeaderProps) {
             <Link href="/fashion" className="shrink-0 px-4 py-3 text-sm text-gray-500 border-b-2 border-transparent whitespace-nowrap hover:text-gray-900">
               👟 패션·신발
             </Link>
+            <Link href="/electronics" className="shrink-0 px-4 py-3 text-sm text-gray-500 border-b-2 border-transparent whitespace-nowrap hover:text-gray-900">
+              💻 전자기기
+            </Link>
           </nav>
         </div>
       </div>
