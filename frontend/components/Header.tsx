@@ -150,6 +150,9 @@ export default function Header({ categories = [] }: HeaderProps) {
             <Link href="/preorder" className="shrink-0 px-4 py-3 text-sm text-gray-500 border-b-2 border-transparent whitespace-nowrap hover:text-gray-900">
               🚀 사전구매
             </Link>
+            <Link href="/timedeal" className="shrink-0 px-4 py-3 text-sm text-gray-500 border-b-2 border-transparent whitespace-nowrap hover:text-gray-900">
+              ⚡ 타임딜
+            </Link>
           </nav>
         </div>
       </div>
