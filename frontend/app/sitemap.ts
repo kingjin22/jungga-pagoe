@@ -20,7 +20,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE_URL}/timedeal`, lastModified: now, changeFrequency: "hourly", priority: 0.8 },
     { url: `${BASE_URL}/fashion`, lastModified: now, changeFrequency: "hourly", priority: 0.8 },
     { url: `${BASE_URL}/electronics`, lastModified: now, changeFrequency: "hourly" as const, priority: 0.8 },
-    { url: `${BASE_URL}/electronics`, lastModified: now, changeFrequency: "hourly" as const, priority: 0.8 },
     { url: `${BASE_URL}/search`, lastModified: now, changeFrequency: "daily", priority: 0.7 },
     // 소스별 페이지
     { url: `${BASE_URL}/source/clien`, lastModified: now, changeFrequency: "hourly", priority: 0.75 },
