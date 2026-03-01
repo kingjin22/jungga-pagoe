@@ -208,6 +208,8 @@ export async function getRelatedDeals(id: number): Promise<Deal[]> {
 export interface PopularSearch {
   keyword: string;
   count: number;
+  discount_rate?: number | null;
+  min_price?: number | null;
 }
 
 export async function getPopularSearches(): Promise<PopularSearch[]> {
