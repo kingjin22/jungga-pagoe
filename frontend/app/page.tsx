@@ -15,6 +15,7 @@ import { DealGridSkeleton } from "@/components/DealCardSkeleton";
 import PopularSearchTags from "@/components/PopularSearchTags";
 import SeasonBanner from "@/components/SeasonBanner";
 import SourceTabs from "@/components/SourceTabs";
+import MallTabs from "@/components/MallTabs";
 
 interface SearchParams {
   sort?: string;
@@ -149,6 +150,9 @@ export default async function HomePage({
 
         {/* C-014: 소스별 채널 탭 필터 (알구몬식) — 전체 탭이 기본 선택 */}
         <SourceTabs activeSource={params.source} />
+
+        {/* C-026: 쇼핑몰별 실시간 핫딜 탭 (쿠차 벤치마킹) */}
+        {!isFiltered && <MallTabs />}
 
         {/* 지금 인기 TOP 3 */}
         {!isFiltered && <TrendingSection deals={trendingDeals} />}

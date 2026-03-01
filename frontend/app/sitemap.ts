@@ -29,6 +29,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE_URL}/source/quasarzone`, lastModified: now, changeFrequency: "hourly", priority: 0.75 },
     { url: `${BASE_URL}/source/naver`, lastModified: now, changeFrequency: "hourly", priority: 0.7 },
     { url: `${BASE_URL}/source/community`, lastModified: now, changeFrequency: "hourly", priority: 0.7 },
+    // C-026: 쇼핑몰별 페이지
+    { url: `${BASE_URL}/mall/naver`, lastModified: now, changeFrequency: "hourly" as const, priority: 0.75 },
+    { url: `${BASE_URL}/mall/coupang`, lastModified: now, changeFrequency: "hourly" as const, priority: 0.75 },
+    { url: `${BASE_URL}/mall/gmarket`, lastModified: now, changeFrequency: "hourly" as const, priority: 0.7 },
+    { url: `${BASE_URL}/mall/11st`, lastModified: now, changeFrequency: "hourly" as const, priority: 0.7 },
+    { url: `${BASE_URL}/mall/lotteon`, lastModified: now, changeFrequency: "daily" as const, priority: 0.65 },
+    { url: `${BASE_URL}/mall/auction`, lastModified: now, changeFrequency: "daily" as const, priority: 0.65 },
   ];
 
   // 브랜드 페이지

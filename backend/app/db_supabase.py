@@ -67,6 +67,7 @@ def get_deals(
     offset: int = None,  # 직접 offset 지정 시 page 무시
     price_min: int = None,
     price_max: int = None,
+    mall: str = None,  # C-026: 쇼핑몰 URL 패턴 필터
 ) -> dict:
     sb = get_supabase()
     query = sb.table("deals").select("*", count="exact")
@@ -78,6 +79,20 @@ def get_deals(
         query = query.eq("category", category)
     if source:
         query = query.eq("source", source)
+    if mall:
+        # C-026: 쇼핑몰 기준 필터 (product_url 도메인 패턴)
+        MALL_URL_PATTERNS: dict = {
+            "coupang":   "coupang.com",
+            "naver":     "naver.com",
+            "gmarket":   "gmarket.co.kr",
+            "11st":      "11st.co.kr",
+            "lotteon":   "lotteon.com",
+            "auction":   "auction.co.kr",
+            "gsshop":    "gsshop.com",
+            "cjonstyle": "cjonstyle.com",
+        }
+        pattern = MALL_URL_PATTERNS.get(mall, mall)
+        query = query.ilike("product_url", f"%{pattern}%")
     if hot_only:
         query = query.eq("is_hot", True)
     if search:

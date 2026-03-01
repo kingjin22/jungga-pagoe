@@ -20,11 +20,13 @@ async def get_deals(
     brand: Optional[str] = None,
     price_min: Optional[int] = None,
     price_max: Optional[int] = None,
+    mall: Optional[str] = None,
 ):
     return db.get_deals(
         page=page, size=size, category=category,
         source=source, sort=sort, search=search, hot_only=hot_only,
         brand=brand, offset=offset, price_min=price_min, price_max=price_max,
+        mall=mall,
     )
 
 
@@ -61,6 +63,64 @@ async def get_deal_sources():
                 "label": SOURCE_LABELS.get(source, "기타"),
                 "count": count,
             })
+        return result
+    except Exception:
+        return []
+
+
+@router.get("/malls")
+async def get_deal_malls():
+    """쇼핑몰별 딜 통계 — 쇼핑몰 탭 필터에 사용 (C-026)"""
+    sb = db.get_supabase()
+    MALL_URL_PATTERNS: dict[str, str] = {
+        "coupang":   "coupang.com",
+        "naver":     "naver.com",
+        "gmarket":   "gmarket.co.kr",
+        "11st":      "11st.co.kr",
+        "lotteon":   "lotteon.com",
+        "auction":   "auction.co.kr",
+        "gsshop":    "gsshop.com",
+        "cjonstyle": "cjonstyle.com",
+    }
+    MALL_LABELS: dict[str, str] = {
+        "coupang":   "쿠팡",
+        "naver":     "네이버",
+        "gmarket":   "G마켓",
+        "11st":      "11번가",
+        "lotteon":   "롯데온",
+        "auction":   "옥션",
+        "gsshop":    "GS SHOP",
+        "cjonstyle": "CJ온스타일",
+    }
+    MALL_ICONS: dict[str, str] = {
+        "coupang":   "🛍️",
+        "naver":     "🟢",
+        "gmarket":   "🏪",
+        "11st":      "🔴",
+        "lotteon":   "🟤",
+        "auction":   "🔨",
+        "gsshop":    "🟣",
+        "cjonstyle": "📺",
+    }
+    result = []
+    try:
+        for mall_key, url_pattern in MALL_URL_PATTERNS.items():
+            res = (
+                sb.table("deals")
+                .select("id", count="exact")
+                .eq("status", "active")
+                .ilike("product_url", f"%{url_pattern}%")
+                .execute()
+            )
+            count = res.count or 0
+            if count > 0:
+                result.append({
+                    "mall": mall_key,
+                    "label": MALL_LABELS.get(mall_key, mall_key),
+                    "icon": MALL_ICONS.get(mall_key, "🏬"),
+                    "count": count,
+                })
+        result.sort(key=lambda x: -x["count"])
         return result
     except Exception:
         return []
