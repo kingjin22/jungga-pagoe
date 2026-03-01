@@ -38,6 +38,31 @@ const CATEGORY_EMOJI: Record<string, string> = {
   "기타": "📦",
 };
 
+// 이미지 없는 카드에 카테고리별 그라데이션 배경 적용 (단조로운 회색 대신 시각적 구분)
+const CATEGORY_GRADIENT: Record<string, string> = {
+  "노트북/PC":     "from-blue-50 via-indigo-50 to-blue-100",
+  "모니터/TV":     "from-slate-50 via-blue-50 to-slate-100",
+  "스마트폰":      "from-sky-50 via-cyan-50 to-sky-100",
+  "태블릿":        "from-sky-50 via-cyan-50 to-sky-100",
+  "이어폰/헤드폰": "from-violet-50 via-purple-50 to-violet-100",
+  "카메라":        "from-amber-50 via-yellow-50 to-amber-100",
+  "가전":          "from-teal-50 via-emerald-50 to-teal-100",
+  "게임":          "from-red-50 via-rose-50 to-red-100",
+  "네트워크":      "from-cyan-50 via-sky-50 to-cyan-100",
+  "패션/의류":     "from-rose-50 via-pink-50 to-rose-100",
+  "패션":          "from-rose-50 via-pink-50 to-rose-100",
+  "식품":          "from-orange-50 via-amber-50 to-orange-100",
+  "뷰티":          "from-fuchsia-50 via-pink-50 to-fuchsia-100",
+  "홈리빙":        "from-green-50 via-teal-50 to-green-100",
+  "건강":          "from-lime-50 via-green-50 to-lime-100",
+  "도서":          "from-yellow-50 via-amber-50 to-yellow-100",
+  "소프트웨어":    "from-blue-50 via-indigo-50 to-blue-100",
+  "스포츠":        "from-green-50 via-lime-50 to-emerald-100",
+  "유아동":        "from-yellow-50 via-orange-50 to-yellow-100",
+  "전자기기":      "from-indigo-50 via-blue-50 to-indigo-100",
+  "기타":          "from-gray-50 via-slate-50 to-gray-100",
+};
+
 function TimeLeftBadge({ createdAt }: { createdAt: string }) {
   const [left, setLeft] = useState("");
 
@@ -242,8 +267,9 @@ export default function DealCard({ deal, onClick, onDismiss }: DealCardProps) {
             onError={() => setImgError(true)}
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-4xl bg-gray-50">
-            {CATEGORY_EMOJI[deal.category] || "📦"}
+          <div className={`w-full h-full flex flex-col items-center justify-center gap-1.5 bg-gradient-to-br ${CATEGORY_GRADIENT[deal.category] || "from-gray-50 to-gray-100"}`}>
+            <span className="text-3xl">{CATEGORY_EMOJI[deal.category] || "📦"}</span>
+            <span className="text-[10px] text-gray-400 font-medium">{deal.category}</span>
           </div>
         )}
 

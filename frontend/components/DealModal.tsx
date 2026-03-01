@@ -105,18 +105,33 @@ export default function DealModal({ deal, onClose }: DealModalProps) {
     <div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
       onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label={d.title}
     >
       {/* 배경 */}
-      <div className="absolute inset-0 bg-black/50" />
-
-      {/* 모달 */}
       <div
-        className="relative bg-white w-full sm:max-w-lg sm:mx-4 max-h-[90vh] overflow-y-auto"
+        className="absolute inset-0 bg-black/50"
+        style={{ animation: "backdropFadeIn 0.2s ease both" }}
+      />
+
+      {/* 모달 — 모바일: 슬라이드업, 데스크톱: 스케일인 */}
+      <div
+        className="relative bg-white w-full sm:max-w-lg sm:mx-4 sm:rounded-sm max-h-[90vh] overflow-y-auto overscroll-contain"
+        style={{
+          animation: "slideUpModal 0.32s cubic-bezier(0.32, 0.72, 0, 1) both",
+        }}
         onClick={(e) => e.stopPropagation()}
       >
+        {/* 모바일 드래그 핸들 — 시트 상단에 인디케이터 표시 */}
+        <div className="sm:hidden flex justify-center pt-3 pb-0.5" aria-hidden="true">
+          <div className="w-10 h-1 rounded-full bg-gray-200" />
+        </div>
+
         {/* 닫기 버튼 */}
         <button
           onClick={onClose}
+          aria-label="닫기"
           className="absolute top-4 right-4 z-10 w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-900 bg-white border border-gray-200"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -140,7 +155,7 @@ export default function DealModal({ deal, onClose }: DealModalProps) {
         </div>
 
         {/* 내용 */}
-        <div className="p-5">
+        <div className="p-5 modal-safe-bottom">
           {/* 메타 */}
           <div className="flex items-center gap-2 mb-2">
             <span className="text-[11px] text-gray-400 font-medium">

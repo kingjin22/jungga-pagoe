@@ -116,3 +116,38 @@ input:focus, select:focus, textarea:focus {
   }
 }
 
+/* DealModal 모바일 슬라이드업 진입 */
+@keyframes slideUpModal {
+  from {
+    transform: translateY(40px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* DealModal 데스크톱 scale-in 진입 */
+@keyframes scaleInModal {
+  from {
+    transform: scale(0.96) translateY(8px);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+/* 백드롭 페이드인 */
+@keyframes backdropFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* iOS 홈 인디케이터 안전 영역 — 모달 하단 여백 */
+.modal-safe-bottom {
+  padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
+}
+
