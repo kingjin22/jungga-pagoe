@@ -162,6 +162,9 @@ export default function Header({ categories = [] }: HeaderProps) {
             <Link href="/overseas" className="shrink-0 px-4 py-3 text-sm text-gray-500 border-b-2 border-transparent whitespace-nowrap hover:text-gray-900">
               🌍 해외직구
             </Link>
+            <Link href="/gaming" className="shrink-0 px-4 py-3 text-sm text-gray-500 border-b-2 border-transparent whitespace-nowrap hover:text-gray-900">
+              🎮 게이밍
+            </Link>
           </nav>
         </div>
       </div>
